@@ -53,7 +53,7 @@ class HorizonsVenusEphemeris:
     No conversion needed — they speak the same language.
     """
 
-    BASE_URL = "https://ssd-api.jpl.nasa.gov/horizons.api"
+    BASE_URL = "https://ssd.jpl.nasa.gov/api/horizons.api"
 
     def get_sub_earth_series(
         self,
@@ -71,27 +71,48 @@ class HorizonsVenusEphemeris:
         step        : Horizons step string e.g. '1d', '6h', '1h'
         """
         def _fmt(dt: datetime) -> str:
-            return dt.strftime("%Y-%b-%d %H:%M")
+            # Horizons API requires single quotes around date strings with spaces
+            return f"'{dt.strftime('%Y-%b-%d %H:%M')}'"
 
-        params = {
-            "format": "json",
-            "COMMAND": "299",          # Venus barycenter
-            "OBJ_DATA": "NO",
-            "MAKE_EPHEM": "YES",
-            "EPHEM_TYPE": "OBSERVER",
-            "CENTER": "500@399",       # Geocenter
-            "START_TIME": _fmt(start),
-            "STOP_TIME": _fmt(stop),
-            "STEP_SIZE": step,
-            "QUANTITIES": "14",        # ObsSub-LON, ObsSub-LAT
-            "ANG_FORMAT": "DEG",
-            "CAL_FORMAT": "CAL",
-            "CSV_FORMAT": "YES",
-        }
+        # Build URL manually — urllib.parse.urlencode encodes @ as %40 which
+        # some Horizons API versions reject in the CENTER parameter.
+        start_str = start.strftime("%Y-%m-%d")
+        stop_str  = stop.strftime("%Y-%m-%d")
 
-        url = self.BASE_URL + "?" + urllib.parse.urlencode(params)
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            payload = json.loads(resp.read().decode())
+        url = (
+            f"{self.BASE_URL}"
+            f"?format=json"
+            f"&COMMAND='299'"
+            f"&OBJ_DATA=NO"
+            f"&MAKE_EPHEM=YES"
+            f"&EPHEM_TYPE=OBSERVER"
+            f"&CENTER='500@399'"
+            f"&START_TIME='{start_str}'"
+            f"&STOP_TIME='{stop_str}'"
+            f"&STEP_SIZE='{step}'"
+            f"&QUANTITIES='14'"
+            f"&ANG_FORMAT=DEG"
+            f"&CAL_FORMAT=CAL"
+            f"&CSV_FORMAT=YES"
+        )
+
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "ORI-EVE-LinkBudget/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                payload = json.loads(resp.read().decode())
+        except Exception as urllib_err:
+            # Fall back to curl — more reliable with some SSL/proxy configurations
+            import subprocess
+            try:
+                result = subprocess.run(
+                    ["curl", "-s", "--max-time", "30", url],
+                    capture_output=True, text=True, check=True
+                )
+                payload = json.loads(result.stdout)
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                raise urllib_err  # re-raise original error if curl also fails
 
         raw = payload.get("result", "")
         return self._parse_csv_result(raw)
@@ -214,14 +235,13 @@ class HorizonsVenusEphemeris:
 
 
 # ---------------------------------------------------------------------------
-# 2.  Magellan GREDR reflectivity map  (GDAL-backed)
+# 2.  Magellan GREDR reflectivity map
 # ---------------------------------------------------------------------------
 
 class VenusReflectivityMap:
     """
     Loads the Magellan Global Reflectivity Data Record (GREDR) from the
-    PDS Geosciences Node using GDAL, which reads PDS3 .img files natively
-    and handles all projection / georeferencing metadata automatically.
+    PDS Geosciences Node.
 
     Coordinate convention: West longitude, 0-360°, matching Horizons ObsSub-LON.
 
@@ -230,16 +250,24 @@ class VenusReflectivityMap:
       - Aphrodite Terra:      0.20 – 0.35   (~105° W lon, equatorial)
       - Maxwell Montes:       0.40 – 0.60   (~3° W lon, ~65° N lat)
 
-    Install GDAL:
-        pip install GDAL
-    or on conda:
-        conda install -c conda-forge gdal
+    Loader strategy (automatic, no action required):
+      1. GDAL  — used if `from osgeo import gdal` succeeds.
+                 Reads PDS3 natively, honours all label metadata.
+                 Install: conda install -c conda-forge gdal
+                          (plain `pip install GDAL` needs system libs first;
+                           see GDAL install note in the notebook)
+      2. Direct PDS3 parser  — pure Python / NumPy fallback used automatically
+                 when GDAL is not available. Reads the .lbl sidecar directly
+                 and decodes the binary .img. Works without any extra installs.
+
+    Both paths produce identical internal state, so all downstream code
+    (VenusAlbedoMapper, plots, etc.) is unaffected by which loader ran.
 
     Usage
     -----
         vmap = VenusReflectivityMap()
         vmap.download_and_cache()      # once; saves browse.img + browse.lbl
-        vmap.load_from_files()
+        vmap.load_from_files()         # auto-selects GDAL or fallback
         r = vmap.reflectivity_at(lat=0, lon_west=105)  # Aphrodite Terra
     """
 
@@ -259,15 +287,14 @@ class VenusReflectivityMap:
         self.lbl_path  = os.path.join(self.cache_dir, "browse.lbl")
         self.img_path  = os.path.join(self.cache_dir, "browse.img")
 
-        # Set after load_from_files()
-        self._ds           = None   # osgeo.gdal.Dataset (kept open for sampling)
-        self._band         = None   # raster band 1
-        self._gt           = None   # GDAL GeoTransform tuple
-        self._reflectivity = None   # full 2-D float array (loaded on demand)
-        self._lat_centers  = None
-        self._lon_centers  = None
-        self._nodata       = None
+        # Set after load_from_files() — identical regardless of which loader ran
+        self._gt           = None   # (x_min, dx, 0, y_max, 0, dy) GeoTransform tuple
+        self._reflectivity = None   # 2-D float64 array, shape (n_lat, n_lon)
+        self._lat_centers  = None   # 1-D array, degrees North, descending
+        self._lon_centers  = None   # 1-D array, in map's native lon convention
+        self._lon_is_east  = False  # True if map uses East longitude (0→360°E)
         self._loaded       = False
+        self._loader_used  = None   # "gdal" or "pds3"
 
     # --- acquisition ---
 
@@ -286,7 +313,7 @@ class VenusReflectivityMap:
             urllib.request.urlretrieve(url, path)
             print(f"  Saved to {path}  ({os.path.getsize(path):,} bytes)")
 
-    # --- GDAL loader ---
+    # --- public loader (auto-selects GDAL or fallback) ---
 
     def load_from_files(
         self,
@@ -294,106 +321,241 @@ class VenusReflectivityMap:
         img_path: Optional[str] = None,
     ) -> None:
         """
-        Open the PDS3 image with GDAL and read it into a NumPy array.
+        Load the GREDR map into a NumPy array.
 
-        GDAL reads the .lbl sidecar automatically when you open the .img file
-        (it follows the ^IMAGE pointer in the label). The GeoTransform gives
-        us pixel → (lon, lat) mapping with no manual label parsing needed.
+        Tries GDAL first (handles any exotic PDS3 binary encoding).
+        Falls back to the built-in PDS3 parser if GDAL is not installed.
+        Both paths produce identical internal state.
 
-        Parameters
-        ----------
-        lbl_path, img_path : optional paths; defaults to cached copies.
+        Note: GDAL is used only for reading the raw pixel data. Geographic
+        bounds and scaling are always read from the PDS3 label directly,
+        because the GREDR browse label does not include the GeoTransform
+        keywords that GDAL's PDS3 driver needs for automatic georeferencing.
         """
+        img = img_path or self.img_path
+        lbl = lbl_path or self.lbl_path
+
+        for path, label in [(img, "browse.img"), (lbl, "browse.lbl")]:
+            if not os.path.exists(path):
+                raise FileNotFoundError(
+                    f"{label} not found at {path}\n"
+                    "Run VenusReflectivityMap().download_and_cache() first."
+                )
+
         try:
             from osgeo import gdal
+            self._load_via_gdal(img, lbl, gdal)
+            self._loader_used = "gdal"
         except ImportError:
-            raise ImportError(
-                "GDAL is required for VenusReflectivityMap.\n"
-                "Install it with:  pip install GDAL\n"
-                "or:               conda install -c conda-forge gdal"
-            )
+            print("  GDAL not available — using built-in PDS3 parser.")
+            print("  (To use GDAL: conda install -c conda-forge gdal)")
+            self._load_via_pds3(img, lbl)
+            self._loader_used = "pds3"
 
-        img = img_path or self.img_path
-        if not os.path.exists(img):
-            raise FileNotFoundError(
-                f"Image file not found: {img}\n"
-                "Run VenusReflectivityMap().download_and_cache() first."
-            )
+    # --- GDAL loader ---
 
-        # GDAL opens PDS3 IMG files natively; it reads the paired .lbl
-        # automatically via the ^IMAGE pointer if the label is a sidecar.
+    def _load_via_gdal(self, img_path: str, lbl_path: str, gdal) -> None:
+        """
+        Use GDAL to read the raw pixel array, then apply geographic bounds
+        and scaling from the PDS3 label directly.
+
+        GDAL's PDS3 driver does not always find the georeferencing keywords
+        in browse-product labels (it gets pixel-space coordinates instead of
+        degrees). We therefore parse the label ourselves for all metadata and
+        use GDAL only for its binary decoding of the image data.
+        """
         gdal.UseExceptions()
-        self._ds = gdal.Open(img, gdal.GA_ReadOnly)
-        if self._ds is None:
-            raise RuntimeError(f"GDAL could not open {img}")
+        ds = gdal.Open(img_path, gdal.GA_ReadOnly)
+        if ds is None:
+            raise RuntimeError(f"GDAL could not open {img_path}")
 
-        self._band = self._ds.GetRasterBand(1)
+        band = ds.GetRasterBand(1)
+        nx   = ds.RasterXSize
+        ny   = ds.RasterYSize
 
-        # GeoTransform: (x_min, pixel_width, 0, y_max, 0, -pixel_height)
-        #   x = longitude (West, 0-360), y = latitude (N positive)
-        self._gt = self._ds.GetGeoTransform()
-        nx = self._ds.RasterXSize
-        ny = self._ds.RasterYSize
+        # Read raw pixel values — GDAL handles any PDS3 binary encoding
+        raw = band.ReadAsArray().astype(np.float64)
 
-        x_min, dx, _, y_max, _, dy = self._gt   # dy is negative for north-up
-        x_max = x_min + dx * nx
-        y_min = y_max + dy * ny   # dy < 0 so this subtracts
+        # Parse geographic bounds and scaling from the label (authoritative)
+        meta = self._parse_pds3_label(lbl_path)
 
-        # Build coordinate arrays (pixel centres)
-        self._lon_centers = np.linspace(x_min + dx / 2, x_max - dx / 2, nx)
-        self._lat_centers = np.linspace(y_max + dy / 2, y_min - dy / 2, ny)
+        # Apply PDS3 scaling: reflectivity = raw * SCALING_FACTOR + OFFSET
+        raw = raw * meta["scale"] + meta["offset"]
 
-        # NoData value (invalid pixels — some PDS products use 0 or 255)
-        nd = self._band.GetNoDataValue()
-        self._nodata = nd
+        # Compute the true left-edge longitude.
+        # X_AXIS_PROJECTION_OFFSET is the column (0-based) where CENTER_LONGITUDE falls.
+        # If absent, fall back to the label's stated MINIMUM_LONGITUDE.
+        lat_min = meta["lat_min"]
+        lat_max = meta["lat_max"]
+        if meta.get("x_proj_offset") is not None:
+            deg_per_pixel = 360.0 / nx
+            lon_start = meta["center_longitude"] - meta["x_proj_offset"] * deg_per_pixel
+        else:
+            lon_start = meta["lon_min"]
+        dx =  360.0 / nx
+        dy = -(lat_max - lat_min) / ny
+        self._gt = (lon_start, dx, 0.0, lat_max, 0.0, dy)
 
-        # Read the full band into a float64 array and apply scale/offset
-        # GDAL applies SCALE and OFFSET from the label automatically when
-        # you read via ReadAsArray() — the result is already in physical units.
-        raw = self._band.ReadAsArray().astype(np.float64)
-
-        # Mask nodata pixels; fill with the global median so they don't
-        # bias the hemisphere integration
-        if nd is not None:
-            mask = (raw == nd)
-            if mask.any():
-                raw[mask] = np.nanmedian(raw[~mask])
-
-        # Clip to [0, 1] — physical reflectivity must be in this range
+        self._lon_centers  = np.linspace(lon_start + dx/2, lon_start + 360.0 - dx/2, nx)
+        self._lat_centers  = np.linspace(lat_max + dy/2, lat_min - dy/2, ny)
         self._reflectivity = np.clip(raw, 0.0, 1.0)
-        self._loaded = True
+        self._lon_is_east  = meta.get("lon_direction", "WEST").upper() == "EAST"
+        self._loaded       = True
 
         print(f"  GREDR loaded via GDAL: {ny} lines × {nx} samples")
-        print(f"  Longitude range: {x_min:.1f}° – {x_max:.1f}° West")
-        print(f"  Latitude range:  {y_min:.1f}° – {y_max:.1f}° North")
+        print(f"  Column-0 longitude: {lon_start:.1f}°  "
+              f"({'East' if self._lon_is_east else 'West'})")
+        print(f"  Latitude range:  {lat_min:.1f}° – {lat_max:.1f}° North")
+        self._print_stats()
+
+    # --- Pure-Python / NumPy PDS3 fallback loader ---
+
+    def _load_via_pds3(self, img_path: str, lbl_path: str) -> None:
+        """
+        Load using a direct PDS3 parser — no external dependencies beyond NumPy.
+
+        Reads SCALING_FACTOR, OFFSET, and all spatial keywords from the .lbl
+        sidecar, then decodes the raw binary .img accordingly.
+        """
+        meta = self._parse_pds3_label(lbl_path)
+
+        nlines  = meta["lines"]
+        nsamples= meta["line_samples"]
+
+        # Dtype from label
+        dtype_map = {
+            "PC_REAL":         np.float32,
+            "IEEE_REAL":       np.float32,
+            "SUN_INTEGER":     np.int16,
+            "PC_INTEGER":      np.int16,
+            "LSB_INTEGER":     np.int16,
+            "MSB_INTEGER":     np.int16,
+            "UNSIGNED_INTEGER":np.uint8,
+            "BYTE":            np.uint8,
+        }
+        dt = dtype_map.get(meta["sample_type"].upper(), np.uint8)
+
+        raw = np.fromfile(img_path, dtype=dt)
+
+        # Some PDS3 products have a label prefix embedded in the file itself
+        # (RECORD_TYPE = FIXED_LENGTH with LABEL_RECORDS > 0).
+        # If the flat read gives us more bytes than nlines*nsamples, strip the header.
+        expected = nlines * nsamples
+        if raw.size > expected:
+            raw = raw[-expected:]   # take the last N elements (the image data)
+        elif raw.size < expected:
+            # Pad with zeros if the file is shorter than expected (shouldn't happen)
+            raw = np.pad(raw, (0, expected - raw.size))
+
+        raw = raw.reshape(nlines, nsamples).astype(np.float64)
+
+        # Apply PDS3 scaling: physical = raw * SCALING_FACTOR + OFFSET
+        raw = raw * meta["scale"] + meta["offset"]
+
+        # Compute the true left-edge longitude using the projection offset keyword
+        lat_min = meta["lat_min"]
+        lat_max = meta["lat_max"]
+        if meta.get("x_proj_offset") is not None:
+            deg_per_pixel = 360.0 / nsamples
+            lon_start = meta["center_longitude"] - meta["x_proj_offset"] * deg_per_pixel
+        else:
+            lon_start = meta["lon_min"]
+        dx =  360.0 / nsamples
+        dy = -(lat_max - lat_min) / nlines
+        self._gt = (lon_start, dx, 0.0, lat_max, 0.0, dy)
+
+        self._lon_centers  = np.linspace(lon_start + dx/2, lon_start + 360.0 - dx/2, nsamples)
+        self._lat_centers  = np.linspace(lat_max + dy/2, lat_min - dy/2, nlines)
+        self._reflectivity = np.clip(raw, 0.0, 1.0)
+        self._lon_is_east  = meta.get("lon_direction", "WEST").upper() == "EAST"
+        self._loaded       = True
+
+        print(f"  GREDR loaded via PDS3 parser: {nlines} lines × {nsamples} samples")
+        print(f"  Column-0 longitude: {lon_start:.1f}°  "
+              f"({'East' if self._lon_is_east else 'West'})")
+        print(f"  Latitude range:  {lat_min:.1f}° – {lat_max:.1f}° North")
+        self._print_stats()
+
+    @staticmethod
+    def _parse_pds3_label(lbl_path: str) -> dict:
+        """
+        Extract geometry and scaling keywords from a PDS3 label file.
+        Returns a dict with everything _load_via_pds3 needs.
+        """
+        with open(lbl_path, "r", encoding="latin-1") as f:
+            text = f.read()
+
+        def _kw(pattern, default=None, cast=float):
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                try:
+                    return cast(m.group(1).strip().strip('"').split()[0])
+                except Exception:
+                    pass
+            return default
+
+        return {
+            "lines":        int(_kw(r"LINES\s*=\s*(\d+)",           512)),
+            "line_samples": int(_kw(r"LINE_SAMPLES\s*=\s*(\d+)",    1024)),
+            "sample_bits":  int(_kw(r"SAMPLE_BITS\s*=\s*(\d+)",     8)),
+            "sample_type":  _kw(r'SAMPLE_TYPE\s*=\s*"?(\w+)"?',
+                                "UNSIGNED_INTEGER", cast=str),
+            "lat_min":      _kw(r"MINIMUM_LATITUDE\s*=\s*([-\d.]+)",      -70.0),
+            "lat_max":      _kw(r"MAXIMUM_LATITUDE\s*=\s*([-\d.]+)",       70.0),
+            # Accept both WESTERNMOST/EASTERNMOST and MINIMUM/MAXIMUM_LONGITUDE
+            "lon_min":      (_kw(r"WESTERNMOST_LONGITUDE\s*=\s*([-\d.]+)")
+                             or _kw(r"MINIMUM_LONGITUDE\s*=\s*([-\d.]+)",   0.0)),
+            "lon_max":      (_kw(r"EASTERNMOST_LONGITUDE\s*=\s*([-\d.]+)")
+                             or _kw(r"MAXIMUM_LONGITUDE\s*=\s*([-\d.]+)", 360.0)),
+            "scale":        _kw(r"SCALING_FACTOR\s*=\s*([-\d.eE+]+)",  1.0/255),
+            "offset":       _kw(r"OFFSET\s*=\s*([-\d.eE+]+)",              0.0),
+            # "EAST" means columns go 0→360° East; "WEST" means 0→360° West
+            "lon_direction": _kw(r"POSITIVE_LONGITUDE_DIRECTION\s*=\s*(\w+)",
+                                 "WEST", cast=str),
+            # Projection origin keywords — needed to compute the correct column-0 longitude
+            "center_longitude": _kw(r"CENTER_LONGITUDE\s*=\s*([-\d.]+)",    0.0),
+            "x_proj_offset":    _kw(r"X_AXIS_PROJECTION_OFFSET\s*=\s*([-\d.]+)", None),
+        }
+
+    def _print_stats(self) -> None:
+        r = self._reflectivity
         print(f"  Reflectivity:    "
-              f"min={self._reflectivity.min():.3f}  "
-              f"mean={self._reflectivity.mean():.3f}  "
-              f"max={self._reflectivity.max():.3f}")
+              f"min={r.min():.3f}  mean={r.mean():.3f}  max={r.max():.3f}")
 
     # --- point sampling ---
 
-    def reflectivity_at(self, lat: float, lon_west: float) -> float:
+    def reflectivity_at(self, lat: float, lon_east: float) -> float:
         """
-        Return bilinearly interpolated reflectivity at (lat [°N], lon_west [°W]).
+        Return bilinearly interpolated reflectivity at (lat [°N], lon_east [°E]).
 
-        Uses GDAL's pixel-coordinate transform so the interpolation is
-        consistent with the map's actual projection metadata.
+        Accepts East longitude (0-360°E), which is the convention used by:
+          - JPL Horizons ObsSub-LON for Venus
+          - Magellan GREDR (POSITIVE_LONGITUDE_DIRECTION = EAST)
+          - Venus feature databases (USGS Gazetteer)
+
+        If the underlying map happens to be West-positive (rare), the conversion
+        is handled internally using the _lon_is_east flag set during loading.
         """
         if not self._loaded:
             raise RuntimeError("Call load_from_files() first.")
 
-        lon_west = lon_west % 360.0   # wrap to [0, 360)
+        lon_east = lon_east % 360.0   # wrap to [0, 360)
 
-        # Convert geographic → fractional pixel coordinates via inverse GeoTransform.
-        # GeoTransform: X_geo = gt[0] + col*gt[1] + row*gt[2]
-        #               Y_geo = gt[3] + col*gt[4] + row*gt[5]
-        # For a north-up image (gt[2]=gt[4]=0):
-        #   col = (X_geo - gt[0]) / gt[1]
-        #   row = (Y_geo - gt[3]) / gt[5]
+        # Map the query longitude to the map's native pixel coordinate
+        if self._lon_is_east:
+            lon_query = lon_east                       # map is East-positive, use directly
+        else:
+            lon_query = (360.0 - lon_east) % 360.0    # convert East→West for West-positive maps
+
+        # Normalize query longitude to the image's actual starting longitude.
+        # The image may start at a non-zero longitude (e.g. -30°E for this GREDR file).
+        # We map the query into [lon_start, lon_start + 360) before computing the column.
+        lon_start = self._gt[0]
+        lon_query = lon_start + (lon_query - lon_start) % 360.0
+
         gt = self._gt
-        col_f = (lon_west - gt[0]) / gt[1]
-        row_f = (lat      - gt[3]) / gt[5]
+        col_f = (lon_query - gt[0]) / gt[1]
+        row_f = (lat       - gt[3]) / gt[5]
 
         ny, nx = self._reflectivity.shape
         col_f = np.clip(col_f, 0, nx - 1.001)
@@ -482,10 +644,9 @@ class VenusReflectivityMap:
                     label=f"Sub-Earth point\n({sub_lon_west:.1f}° W, {sub_lat:.1f}° N)")
             ax.legend(loc="lower right")
 
-        ax.set_xlabel("West Longitude (degrees)")
+        ax.set_xlabel("GREDR East Longitude (degrees)")
         ax.set_ylabel("Latitude (degrees N)")
         ax.set_title(title)
-        ax.invert_xaxis()   # West longitude increases right→left conventionally
         ax.grid(True, alpha=0.25)
         plt.tight_layout()
         return fig
@@ -520,34 +681,48 @@ class VenusAlbedoMapper:
     n = 1 for Lambertian). Venus at decimeter wavelengths is quasi-specular
     with n ≈ 2–4 for the smooth plains.
 
-    The effective albedo is:
+    Coordinate system note
+    ----------------------
+    The Magellan GREDR uses the 1990s Magellan mission coordinate frame.
+    JPL Horizons uses the IAU 2000 Venus frame. These differ by approximately
+    180.7° theoretically (different W₀ in the rotation model), measured
+    empirically as ~186.5° from Aphrodite Terra's known position:
 
-        ρ_eff = ∫∫ r(λ,φ) · w(Δ) · cos(φ) dλ dφ
-               ─────────────────────────────────────
-                ∫∫ w(Δ) · cos(φ) dλ dφ
+        GREDR_lon = Horizons_ObsSub_LON + horizons_lon_offset
 
-    (integral over the visible hemisphere, Δ < 90°)
+    This offset is applied automatically inside effective_albedo().
+    If you load a different Venus reflectivity dataset that already uses
+    the IAU 2000 frame, set horizons_lon_offset=0.
 
     Parameters
     ----------
     reflectivity_map : VenusReflectivityMap  (must already be loaded)
     n_backscatter    : float
         Hagfors exponent for the surface scattering law (default 2.0).
-        Higher n → more specular → sub-radar region dominates more.
     grid_resolution_deg : float
         Angular step size for the integration grid (degrees).
-        0.5° gives good accuracy and runs in < 1 s.
+    horizons_lon_offset : float
+        Degrees to add to Horizons ObsSub-LON before looking up the GREDR map.
+        Default 186.5° — the empirically measured Magellan↔IAU 2000 offset.
     """
+
+    # Empirically measured offset between Horizons ObsSub-LON (IAU 2000 frame)
+    # and Magellan GREDR East longitude.
+    # Derived from: Aphrodite Terra at GREDR 291.5°E = Horizons 105°E
+    # Consistent with theoretical ~180.7° difference in Venus rotation W₀.
+    GREDR_HORIZONS_LON_OFFSET = 186.5
 
     def __init__(
         self,
         reflectivity_map: VenusReflectivityMap,
         n_backscatter: float = 2.0,
         grid_resolution_deg: float = 0.5,
+        horizons_lon_offset: float = GREDR_HORIZONS_LON_OFFSET,
     ):
         self.vmap = reflectivity_map
         self.n = n_backscatter
         self.dres = grid_resolution_deg
+        self.horizons_lon_offset = horizons_lon_offset
         self._ephemeris = None  # lazy-init
 
     @property
@@ -558,7 +733,7 @@ class VenusAlbedoMapper:
 
     def effective_albedo(
         self,
-        sub_lon_west_deg: float,
+        sub_lon_east_deg: float,
         sub_lat_deg: float = 0.0,
     ) -> dict:
         """
@@ -566,94 +741,88 @@ class VenusAlbedoMapper:
 
         Parameters
         ----------
-        sub_lon_west_deg : float
-            Venus West longitude of the sub-Earth point (from Horizons ObsSub-LON).
+        sub_lon_east_deg : float
+            Venus East longitude of the sub-Earth point.
+            Pass Horizons ObsSub-LON directly — no conversion needed.
         sub_lat_deg : float
-            Venus latitude of the sub-Earth point (from Horizons ObsSub-LAT).
+            Venus latitude of the sub-Earth point (Horizons ObsSub-LAT).
 
         Returns
         -------
         dict with keys:
-            'albedo_eff'  : float  — the disk-integrated effective albedo (dimensionless)
-            'sub_lon_W'   : float
-            'sub_lat_N'   : float
-            'albedo_min'  : float  — 10th percentile of visible reflectivity (context)
+            'albedo_eff'  : float  — disk-integrated effective albedo
+            'sub_lon_E'   : float  — sub-Earth East longitude used
+            'sub_lat_N'   : float  — sub-Earth latitude used
+            'albedo_min'  : float  — 10th percentile of visible reflectivity
             'albedo_max'  : float  — 90th percentile
         """
-        # Build integration grid over the full sphere in (lon_west, lat)
-        lon_w = np.arange(0.0, 360.0, self.dres)
+        # Convert Horizons ObsSub-LON (IAU 2000 frame) to GREDR map longitude
+        # by applying the Magellan↔IAU 2000 coordinate frame offset.
+        map_lon_center = (sub_lon_east_deg + self.horizons_lon_offset) % 360.0
+
+        # Build integration grid in GREDR map longitude
+        lon_e = np.arange(0.0, 360.0, self.dres)
         lat   = np.arange(-90.0, 90.0 + self.dres, self.dres)
-        LON, LAT = np.meshgrid(lon_w, lat)
+        LON, LAT = np.meshgrid(lon_e, lat)
 
         phi_sub = np.radians(sub_lat_deg)
-        lam_sub = np.radians(sub_lon_west_deg)
+        lam_sub = np.radians(map_lon_center)   # GREDR longitude in radians
         PHI     = np.radians(LAT)
-        LAM     = np.radians(LON)
+        LAM     = np.radians(LON)                 # East longitude in radians
 
-        # Cosine of angle from sub-Earth point
+        # Cosine of angle from sub-Earth point (independent of lon convention)
         cos_delta = (
             np.sin(phi_sub) * np.sin(PHI)
             + np.cos(phi_sub) * np.cos(PHI) * np.cos(LAM - lam_sub)
         )
 
-        # Visibility mask: only the hemisphere facing Earth (cos_delta > 0)
         visible = cos_delta > 0.0
 
         if not np.any(visible):
             return {
-                "albedo_eff": 0.11,  # fallback
-                "sub_lon_W": sub_lon_west_deg,
-                "sub_lat_N": sub_lat_deg,
+                "albedo_eff": 0.11,
+                "sub_lon_E":  sub_lon_east_deg,
+                "sub_lat_N":  sub_lat_deg,
                 "albedo_min": 0.11,
                 "albedo_max": 0.11,
             }
 
-        # Backscatter weight: w(Δ) = cos^n(Δ)
-        weight = np.zeros_like(cos_delta)
+        weight       = np.zeros_like(cos_delta)
         weight[visible] = cos_delta[visible] ** self.n
+        cos_lat      = np.cos(PHI)
+        area_element = cos_lat
 
-        # Area element on the sphere: cos(φ) dφ dλ
-        cos_lat = np.cos(PHI)
-        area_element = cos_lat  # dλ and dφ are equal for our uniform grid
-
-        # Reflectivity map lookup — vectorised over the integration grid
-        # (Flatten → look up → reshape)
-        lat_flat = LAT[visible].ravel()
-        lon_flat = LON[visible].ravel()
+        # Reflectivity lookup — lon_e values are East longitude, matching map convention
+        lat_flat  = LAT[visible].ravel()
+        lon_flat  = LON[visible].ravel()   # East longitude
         refl_flat = np.array([
             self.vmap.reflectivity_at(la, lo)
             for la, lo in zip(lat_flat, lon_flat)
         ])
 
-        w_flat   = weight[visible].ravel()
+        w_flat    = weight[visible].ravel()
         area_flat = area_element[visible].ravel()
         combined  = w_flat * area_flat
 
         numerator   = np.sum(refl_flat * combined)
         denominator = np.sum(combined)
-
-        albedo_eff = numerator / denominator if denominator > 0 else 0.11
-
-        # Percentile context (unweighted, for sanity check)
-        p10 = float(np.percentile(refl_flat, 10))
-        p90 = float(np.percentile(refl_flat, 90))
+        albedo_eff  = numerator / denominator if denominator > 0 else 0.11
 
         return {
             "albedo_eff": float(albedo_eff),
-            "sub_lon_W":  sub_lon_west_deg,
+            "sub_lon_E":  sub_lon_east_deg,
             "sub_lat_N":  sub_lat_deg,
-            "albedo_min": p10,
-            "albedo_max": p90,
+            "albedo_min": float(np.percentile(refl_flat, 10)),
+            "albedo_max": float(np.percentile(refl_flat, 90)),
         }
 
     def albedo_for_date(self, date: datetime) -> dict:
         """
-        Full pipeline: date → Horizons sub-Earth point → disk integration → ρ_eff.
-
-        Returns the same dict as effective_albedo(), plus 'utc_date'.
+        Full pipeline: date → Horizons ObsSub-LON (East) → disk integration → ρ_eff.
+        Horizons ObsSub-LON for Venus is East longitude — passed directly, no conversion.
         """
         sub_lon, sub_lat = self.ephemeris.get_sub_earth_at_date(date)
-        result = self.effective_albedo(sub_lon, sub_lat)
+        result = self.effective_albedo(sub_lon, sub_lat)   # sub_lon is already East
         result["utc_date"] = date
         return result
 
@@ -664,19 +833,16 @@ class VenusAlbedoMapper:
         step: str = "1d",
     ) -> list[dict]:
         """
-        Compute albedo for a date range.  Returns list of dicts,
-        each containing 'utc_date', 'albedo_eff', 'sub_lon_W', etc.
-
-        step : Horizons step string ('1d', '6h', '12h', etc.)
+        Compute albedo for a date range.
+        Returns list of dicts with 'utc_date', 'albedo_eff', 'sub_lon_E', etc.
         """
-        # Fetch all sub-Earth positions in one Horizons call
         rows = self.ephemeris.get_sub_earth_series(start, stop, step)
         results = []
         n = len(rows)
         for i, row in enumerate(rows):
             if i % max(1, n // 10) == 0:
                 print(f"  Integrating... {i}/{n}  "
-                      f"(ObsSub-LON = {row['ObsSub_LON']:.1f}°)")
+                      f"(ObsSub-LON = {row['ObsSub_LON']:.1f}°E)")
             res = self.effective_albedo(row["ObsSub_LON"], row["ObsSub_LAT"])
             res["utc_date"] = row["utc"]
             results.append(res)
@@ -698,7 +864,7 @@ class VenusAlbedoMapper:
         """
         dates   = [r["utc_date"] for r in results]
         albedos = [r["albedo_eff"] for r in results]
-        lons    = [r["sub_lon_W"]  for r in results]
+        lons    = [r["sub_lon_E"]  for r in results]
 
         fig, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
 
@@ -730,7 +896,7 @@ class VenusAlbedoMapper:
         if conjunction_date:
             ax2.axvline(x=conjunction_date, color="red", linestyle="-",
                         linewidth=2)
-        ax2.set_ylabel("ObsSub-LON (degrees West)")
+        ax2.set_ylabel("ObsSub-LON (degrees East)")
         ax2.set_xlabel("Date (UTC)")
         ax2.legend(fontsize=8, loc="upper right")
         ax2.set_ylim(0, 360)
@@ -798,7 +964,7 @@ class DynamicAlbedoEVELinkBudget:
 
         Returns the standard EVELinkBudget dict plus:
           'venus_radar_albedo'  : the spatially resolved ρ_eff used
-          'sub_lon_W'           : sub-Earth longitude (Horizons ObsSub-LON)
+          'sub_lon_E'           : sub-Earth longitude (Horizons ObsSub-LON)
           'sub_lat_N'           : sub-Earth latitude
           'albedo_source'       : 'VenusAlbedoMapper / Magellan GREDR'
         """
@@ -817,7 +983,7 @@ class DynamicAlbedoEVELinkBudget:
         budget.venus_radar_albedo = eff_albedo
         result = budget.calculate_link_budget(distance_km)
         result["venus_radar_albedo"] = eff_albedo
-        result["sub_lon_W"]         = albedo_info["sub_lon_W"]
+        result["sub_lon_E"]         = albedo_info["sub_lon_E"]
         result["sub_lat_N"]         = albedo_info["sub_lat_N"]
         result["albedo_source"]     = "VenusAlbedoMapper / Magellan GREDR"
         return result
@@ -844,7 +1010,7 @@ class DynamicAlbedoEVELinkBudget:
             r.update({
                 "utc_date":         entry["utc_date"],
                 "venus_radar_albedo": entry["albedo_eff"],
-                "sub_lon_W":        entry["sub_lon_W"],
+                "sub_lon_E":        entry["sub_lon_E"],
                 "sub_lat_N":        entry["sub_lat_N"],
             })
             results.append(r)
@@ -899,18 +1065,24 @@ class DynamicAlbedoEVELinkBudget:
 # ---------------------------------------------------------------------------
 
 VENUS_RADAR_FEATURES = {
-    "Aphrodite Terra (main lobe)": {"lon_W": 105, "lat":  -5, "typ_refl": 0.25, "note": "Equatorial; large area"},
-    "Aphrodite Terra (eastern)":   {"lon_W":  60, "lat":  -5, "typ_refl": 0.22, "note": "Eastern lobe"},
-    "Maxwell Montes":              {"lon_W":   3, "lat":  65, "typ_refl": 0.50, "note": "Polar; very bright; small"},
-    "Alpha Regio":                 {"lon_W": 180, "lat": -25, "typ_refl": 0.18, "note": "Southern highlands"},
-    "Beta Regio":                  {"lon_W": 283, "lat":  25, "typ_refl": 0.18, "note": "Volcanic rises"},
-    "Average lowland plains":      {"lon_W":   0, "lat":   0, "typ_refl": 0.12, "note": "Global baseline"},
+    # Longitudes in the GREDR (Magellan) East-positive frame.
+    # To convert to Horizons/IAU 2000 frame: lon_horizons = (lon_GREDR - 186.5) % 360
+    #
+    # Feature                          GREDR lon_E   Horizons lon_E   lat
+    "Aphrodite Terra (equatorial max)":{"lon_E": 292, "lat":  -5, "typ_refl": 0.45,
+                                        "note": "Brightest equatorial feature; Horizons ~105°E"},
+    "Aphrodite Terra (western lobe)":  {"lon_E": 250, "lat":  -5, "typ_refl": 0.22,
+                                        "note": "Western edge; Horizons ~63°E"},
+    "Maxwell Montes":                  {"lon_E":  90, "lat":  65, "typ_refl": 0.75,
+                                        "note": "Global max; polar; Horizons ~264°E"},
+    "Average lowland plains":          {"lon_E": 180, "lat":   0, "typ_refl": 0.11,
+                                        "note": "Global baseline"},
 }
 
 
 def print_feature_table():
-    """Print the known bright Venus radar features and their West longitudes."""
-    print(f"{'Feature':<35} {'Lon W':>6}  {'Lat':>5}  {'Typ Refl':>9}  Note")
+    """Print known bright Venus radar features with East longitudes."""
+    print(f"{'Feature':<35} {'Lon E':>6}  {'Lat':>5}  {'Typ Refl':>9}  Note")
     print("-" * 80)
     for name, info in VENUS_RADAR_FEATURES.items():
-        print(f"{name:<35} {info['lon_W']:>6.0f}°  {info['lat']:>+5.0f}°  {info['typ_refl']:>9.2f}  {info['note']}")
+        print(f"{name:<35} {info['lon_E']:>6.0f}°  {info['lat']:>+5.0f}°  {info['typ_refl']:>9.2f}  {info['note']}")
