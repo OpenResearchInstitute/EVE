@@ -592,7 +592,7 @@ class VenusReflectivityMap:
 
     def plot_map(
         self,
-        sub_lon_west: Optional[float] = None,
+        sub_lon_east: Optional[float] = None,
         sub_lat: Optional[float] = None,
         title: str = "Magellan GREDR Venus Radar Reflectivity",
     ) -> plt.Figure:
@@ -618,16 +618,16 @@ class VenusReflectivityMap:
         plt.colorbar(im, ax=ax, label="Radar Reflectivity")
 
         # Annotate known bright features
-        ax.annotate("Maxwell\nMontes", xy=(3, 65), color="cyan", fontsize=8,
+        ax.annotate("Maxwell\nMontes", xy=(90, 65), color="cyan", fontsize=8,
                     ha="center", fontweight="bold")
-        ax.annotate("Aphrodite\nTerra", xy=(105, 5), color="cyan", fontsize=8,
+        ax.annotate("Aphrodite\nTerra", xy=(292, 5), color="cyan", fontsize=8,
                     ha="center", fontweight="bold")
 
-        if sub_lon_west is not None:
+        if sub_lon_east is not None:
             # Draw the limb circle (great circle 90° from sub-Earth point)
             # This marks the boundary of the hemisphere visible to Earth's radar
             phi_sub = np.radians(sub_lat or 0.0)
-            lam_sub = np.radians(sub_lon_west)
+            lam_sub = np.radians(sub_lon_east)
 
             lam_plot = np.linspace(0, 360, 361)
             lat_plot = np.linspace(-90, 90, 181)
@@ -640,8 +640,8 @@ class VenusReflectivityMap:
             ax.contour(lam_plot, lat_plot, cos_delta, levels=[0.0],
                        colors="lime", linewidths=1.5, linestyles="--")
 
-            ax.plot(sub_lon_west, sub_lat or 0, "g*", markersize=14,
-                    label=f"Sub-Earth point\n({sub_lon_west:.1f}° W, {sub_lat:.1f}° N)")
+            ax.plot(sub_lon_east, sub_lat or 0, "g*", markersize=14,
+                    label=f"Sub-Earth point\n({sub_lon_east:.1f}° E, {sub_lat:.1f}° N)")
             ax.legend(loc="lower right")
 
         ax.set_xlabel("GREDR East Longitude (degrees)")
