@@ -10,3 +10,7 @@ This repository contains a detailed link budget analysis for Earth-Venus-Earth (
 - **venus_albedo_mapper.py** helper classes for the dynamic albedo calculation
 - **test_venus_albedo_mapper.py** test script to prove out venus_albedo_mapper.py
 - **eve-signal-processing-diagram.svg** embedded image illustrating concepts for the Zadoff Chu section
+
+## How to Get This Running
+
+Clone this repository, set up the python environment of your choice, and install dependencies. Run jupyter lab in the EVE directory, and you should be able to open Link_Budget_Modeling.ipynb. Run all cells. Bring any problems you can't solve with getting it up and running to ORI. See https://openresearch.institute/getting-started for how to get in touch for assistance. Issues and PRs are welcome. 
