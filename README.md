@@ -10,6 +10,8 @@ This repository contains a detailed link budget analysis for Earth-Venus-Earth (
 - **venus_albedo_mapper.py** helper classes for the dynamic albedo calculation
 - **test_venus_albedo_mapper.py** test script to prove out venus_albedo_mapper.py
 - **eve-signal-processing-diagram.svg** embedded image illustrating concepts for the Zadoff Chu section
+- **eve_cnr_measusrement.ipynb** validation of the ORI Link Budget using March 2025 CAMRAS data
+- **Validation of the ORI Earth-Venus-Earth Link Budget.pdf** white paper about the validation of the ORI Link Budget using March 2025 CAMRAS data
 
 ## How to Get This Running
 
