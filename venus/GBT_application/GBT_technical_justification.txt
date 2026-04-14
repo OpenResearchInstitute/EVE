@@ -19,28 +19,42 @@ The bistatic link budget uses the monostatic radar range equation adapted for th
 Pr = Pt x Gt x Gr x lambda^2 x sigma / (4 pi)^3 / R^4
 where sigma = rho_eff x pi x R_venus^2, and rho_eff is the disk-integrated effective radar albedo computed from the Magellan GREDR reflectivity map for the specific sub-Earth longitude at each observation date.
 
-Primary transmitting station example: Dwingeloo 25m telescope (CAMRAS), 1000W at 2304 MHz.
+Configuration 1 — L-band sessions (A1, A2)
+Transmitter: Dwingeloo 25m (CAMRAS), 1000W at 1299.5 MHz (confirmed)
+Receiver: GBT 100m (L-band receiver)
 
-Receive station: GBT 100m.
+Transmit power: 1000 W (30.0 dBW)
+TX antenna gain (25m, efficiency 0.69, 1299.5 MHz): 49.0 dB
+RX antenna gain (GBT 100m, efficiency 0.71, 1299.5 MHz): 61.2 dB
+Free space loss (two-way, 40.93 million km, October 22): 492.6 dB
+Venus reflection gain: 164.3 dB
+Venus radar albedo rho_eff (October 22, GREDR model): 0.1164 (-8.34 dB)
+TX and RX line losses: -1.0 dB
+GBT system noise temperature (L-band, 32 degrees elevation): approximately 49 K
+CNR in 1 Hz at minimum distance: +14.42 dB
+Doppler spread: 1.50 Hz, coherence time: 0.667 seconds
+Processing gain: 28.24 dB
+Detection margin above 10 dB threshold: 12.66 dB
 
-As of this application, the link analysis shows:
+Configuration 2 — S-band sessions (B1, B2)
+Transmitter: DSES 18.29m dish, 1500W at 2304 MHz
+Receiver: GBT 100m (S-band receiver)
 
-Transmit power (Dwingeloo): 1000 W (30.0 dBW)
-TX antenna gain (25m, efficiency 0.69, 2304 MHz): 54.0 dB
+Transmit power: 1500 W (31.76 dBW)
+TX antenna gain (18.29m, efficiency 0.69, 2304 MHz): 51.3 dB
 RX antenna gain (GBT 100m, efficiency 0.71, 2304 MHz): 66.2 dB
 Free space loss (two-way, 40.93 million km, October 22): 503.9 dB
 Venus reflection gain: 169.3 dB
 Venus radar albedo rho_eff (October 22, GREDR model): 0.1164 (-8.34 dB)
 TX and RX line losses: -1.0 dB
-GBT system noise temperature (S-band): approximately 68 K
-Noise power (100 kHz bandwidth): -160.2 dBW
-CNR in 1 Hz on October 22: +15.54 dB
-CNR in 1 Hz on October 25 (best day): +15.62 dB
-Detection margin above 10 dB threshold: 13.85 dB
+GBT system noise temperature (S-band, 32 degrees elevation): approximately 68 K
+CNR in 1 Hz at minimum distance: +17.02 dB
+Doppler spread: 2.659 Hz, coherence time: 0.376 seconds
+Processing gain: 25.75 dB
+Detection margin above 10 dB threshold: 12.77 dB
 
-The link closes under coherent integration alone. With a 1000 Hz chip rate M-ary orthogonal waveform and a coherence time of approximately 0.375 seconds (set by Doppler spread of 2.67 Hz at 2304 MHz, scaled from Estevez 2025), processing gain is 25.7 dB, yielding 13.85 dB of margin above the 10 dB detection threshold. No non-coherent integration is required for detection with GBT receiving. Non-coherent integration is required of the "smaller" stations participating, in order to close the link. 
 
-At 1299.5 MHz the Doppler spread scales to approximately 1.50 Hz, giving a coherence time of approximately 0.67 seconds and proportionally greater processing gain. L-band CNR figures for sessions A1 and A2 will be confirmed using the GBT Sensitivity Calculator prior to final submission.
+Both configurations close under coherent integration alone with approximately 12.7 dB of margin above the 10 dB detection threshold. The L-band configuration benefits from lower Doppler spread at 1299.5 MHz (1.50 Hz vs 2.659 Hz), giving a longer coherence time and greater processing gain that offsets the lower antenna gain at that frequency. No non-coherent integration is required for detection with GBT receiving. Non-coherent integration is required of the smaller participating stations to close the link independently.
 
 Observation Sessions and Time Request
 
@@ -48,11 +62,11 @@ Venus remains within 10 percent of minimum distance from approximately October 7
 
 Session A1: October 19-20, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation approximately 32 degrees at Green Bank and approximately 20 degrees at Dwingeloo.
 
-Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.54 dB, elevation 33 degrees at Green Bank and approximately 33 degrees at DSES. 
+Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.54 dB (at conjunction distance), elevation 33 degrees at Green Bank and approximately 33 degrees at DSES. 
 
 Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation 34 degrees at Green Bank and approximately 21 degrees at Dwingeloo.
 
-Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB, elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. Exact times to be determined in coordination with all participation sites. 
+Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. Exact times to be determined in coordination with all participation sites. 
 
 Total time request: 4 sessions x 2.75 hours = 11 hours.
 

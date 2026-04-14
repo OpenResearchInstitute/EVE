@@ -22,7 +22,13 @@ On March 22, 2025, CAMRAS successfully reflected a 1299.5 MHz CW signal off Venu
 
 Why GBT?
 
-The GBT's 100m aperture provides approximately 12 dB of receive advantage over the 25m Dwingeloo telescope and approximately 14 dB over the 20m Bochum telescope. Bistatic link budget modeling (Dwingeloo transmitting at 1000W, GBT receiving) at minimum conjunction distance yields CNR in 1 Hz of +15.54 dB on October 22, with the best day being October 25 at +15.62 dB CNR in 1 Hz. The link closes under coherent integration alone with 16 dB of margin above the 10 dB detection threshold. This margin enables more confident detection of structured digital waveforms, not just a carrier tone, and remains positive across all candidate transmitting stations including smaller dishes at lower power. This opens the experiment up to a larger number of citizen scientist participants. 
+The GBT's 100m aperture provides approximately 12 dB of receive advantage over the 25m Dwingeloo and Stockert telescopes and approximately 14 dB over the 20m Bochum telescope. Bochum, Dwingeloo, and Stockert are all expected to participate as receive stations, with Bochum also potentially transmitting at 2304 MHz pending equipment availability.
+
+Bistatic link budget modeling confirms GBT closes the link under coherent integration alone for both frequency configurations. For L-band sessions (Dwingeloo transmitting at 1299.5 MHz), CNR in 1 Hz at minimum distance is +14.42 dB with 12.66 dB of margin above the 10 dB threshold. For S-band sessions (DSES transmitting at 2304 MHz), CNR in 1 Hz at minimum distance is +17.02 dB with 12.77 dB of margin. The remarkably similar margins across both configurations reflect the channel physics — lower L-band antenna gain is offset by longer 
+coherence time, while higher S-band antenna gain is partially offset by shorter coherence time.
+
+This margin enables more confident detection of structured digital waveforms, not just a carrier tone, and remains positive across all candidate transmitting stations including smaller dishes at lower power. This opens the experiment up to a larger number of citizen scientist participants. 
+
 The S-band receiver covers 2304 MHz and the L-band receiver covers 1299.5 MHz. The National Radio Quiet Zone provides a uniquely clean RF environment at both frequencies, which is particularly valuable at 2304 MHz where terrestrial interference is a concern at European sites.
 
 Open Science Value
