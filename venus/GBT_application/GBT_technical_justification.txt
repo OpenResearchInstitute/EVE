@@ -53,12 +53,11 @@ Doppler spread: 2.659 Hz, coherence time: 0.376 seconds
 Processing gain: 25.75 dB
 Detection margin above 10 dB threshold: 12.77 dB
 
-
 Both configurations close under coherent integration alone with approximately 12.7 dB of margin above the 10 dB detection threshold. The L-band configuration benefits from lower Doppler spread at 1299.5 MHz (1.50 Hz vs 2.659 Hz), giving a longer coherence time and greater processing gain that offsets the lower antenna gain at that frequency. No non-coherent integration is required for detection with GBT receiving. Non-coherent integration is required of the smaller participating stations to close the link independently.
 
 Observation Sessions and Time Request
 
-Venus remains within 10 percent of minimum distance from approximately October 7 through November 12, 2026, with CNR in 1 Hz exceeding +13 dB throughout this period. Four sessions are proposed to provide scheduling flexibility, Venus surface longitude diversity, and dual-frequency coverage.
+Venus remains within 10 percent of minimum distance from approximately October 7 through November 12, 2026, with CNR in 1 Hz exceeding +13 dB throughout this period. Four sessions are proposed to provide scheduling flexibility, Venus surface longitude diversity, and dual-frequency coverage. We are asking for 2.5 hours within each of the following four data ranges. 
 
 Session A1: October 19-20, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation approximately 32 degrees at Green Bank and approximately 20 degrees at Dwingeloo.
 
@@ -66,7 +65,9 @@ Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 15 mi
 
 Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation 34 degrees at Green Bank and approximately 21 degrees at Dwingeloo.
 
-Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. Exact times to be determined in coordination with all participation sites. 
+Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. 
+
+Exact observation windows within each session date will be scheduled to maximize simultaneous visibility from participating transmitting stations. GBO scheduling staff will be consulted (and heeded) during the observing script preparation phase.
 
 Total time request: 4 sessions x 2.75 hours = 11 hours.
 
