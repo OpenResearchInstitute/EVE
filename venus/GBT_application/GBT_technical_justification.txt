@@ -1,0 +1,75 @@
+Technical Justification
+
+Receiver Configuration
+
+Two receivers are required, used on separate sessions. 
+
+Sessions A1 and A2 (1299.5 MHz): L-band receiver (Rcvr1_2, 1.15 to 1.73 GHz), currently available.
+
+Sessions B1 and B2 (2304 MHz): S-band receiver (Rcvr2_3, 1.73 to 2.6 GHz), currently available.
+
+Backend: VEGAS configured for a 1 MHz bandwidth centered on the predicted Doppler-shifted return frequency. At 2304 MHz the maximum expected Doppler shift is approximately plus or minus 150 kHz. At 1299.5 MHz approximately plus or minus 85 kHz. A 1 MHz recording bandwidth provides comfortable guard band at both frequencies. IQ data will be recorded to disk in SigMF format for offline analysis and immediate public release.
+
+We request confirmation from GBO staff of the exact center frequency and bandwidth configuration for IQ recording via VEGAS prior to observation. We are prepared to work with the GBO helpdesk on observing script preparation.
+
+Link Budget
+
+The bistatic link budget uses the monostatic radar range equation adapted for the bistatic case:
+
+Pr = Pt x Gt x Gr x lambda^2 x sigma / (4 pi)^3 / R^4
+where sigma = rho_eff x pi x R_venus^2, and rho_eff is the disk-integrated effective radar albedo computed from the Magellan GREDR reflectivity map for the specific sub-Earth longitude at each observation date.
+
+Primary transmitting station example: Dwingeloo 25m telescope (CAMRAS), 1000W at 2304 MHz.
+
+Receive station: GBT 100m.
+
+As of this application, the link analysis shows:
+
+Transmit power (Dwingeloo): 1000 W (30.0 dBW)
+TX antenna gain (25m, efficiency 0.69, 2304 MHz): 54.0 dB
+RX antenna gain (GBT 100m, efficiency 0.71, 2304 MHz): 66.2 dB
+Free space loss (two-way, 40.93 million km, October 22): 503.9 dB
+Venus reflection gain: 169.3 dB
+Venus radar albedo rho_eff (October 22, GREDR model): 0.1164 (-8.34 dB)
+TX and RX line losses: -1.0 dB
+GBT system noise temperature (S-band): approximately 68 K
+Noise power (100 kHz bandwidth): -160.2 dBW
+CNR in 1 Hz on October 22: +15.54 dB
+CNR in 1 Hz on October 25 (best day): +15.62 dB
+Detection margin above 10 dB threshold: 13.85 dB
+
+The link closes under coherent integration alone. With a 1000 Hz chip rate M-ary orthogonal waveform and a coherence time of approximately 0.375 seconds (set by Doppler spread of 2.67 Hz at 2304 MHz, scaled from Estevez 2025), processing gain is 25.7 dB, yielding 13.85 dB of margin above the 10 dB detection threshold. No non-coherent integration is required for detection with GBT receiving. Non-coherent integration is required of the "smaller" stations participating, in order to close the link. 
+
+At 1299.5 MHz the Doppler spread scales to approximately 1.50 Hz, giving a coherence time of approximately 0.67 seconds and proportionally greater processing gain. L-band CNR figures for sessions A1 and A2 will be confirmed using the GBT Sensitivity Calculator prior to final submission.
+
+Observation Sessions and Time Request
+
+Venus remains within 10 percent of minimum distance from approximately October 7 through November 12, 2026, with CNR in 1 Hz exceeding +13 dB throughout this period. Four sessions are proposed to provide scheduling flexibility, Venus surface longitude diversity, and dual-frequency coverage.
+
+Session A1: October 19-20, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation approximately 32 degrees at Green Bank and approximately 20 degrees at Dwingeloo.
+
+Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.54 dB, elevation 33 degrees at Green Bank and approximately 33 degrees at DSES. 
+
+Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation 34 degrees at Green Bank and approximately 21 degrees at Dwingeloo.
+
+Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB, elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. Exact times to be determined in coordination with all participation sites. 
+
+Total time request: 4 sessions x 2.75 hours = 11 hours.
+
+Sessions A2 and B1 are separated by three days at nearly identical Venus distance and elevation, enabling direct frequency comparison with minimal geometric change between observations. Any two sessions constitute a scientifically complete result. The four-session structure is a scheduling convenience, not a scientific requirement.
+
+Weather Category and Scheduling
+
+Both L-band and S-band fall in the poor weather category (below 8 GHz), the least constrained weather category in GBO scheduling. This maximizes scheduling flexibility. Sessions need not be scheduled consecutively.
+
+Round-Trip Timing
+
+At inferior conjunction (approximately 40.9 million km), the one-way light travel time is approximately 136 seconds, giving a round-trip delay of approximately 272 seconds. GBT will record continuously for the full session window. Transmitting stations coordinate transmission schedules with ORI in advance. GBT requires no real-time knowledge of the transmission schedule. All timing analysis is performed offline using the recorded SigMF files and published ephemeris data.
+
+Data Products and Volume
+
+GBT will record raw IQ data in SigMF format. Data will be transferred to ORI within 48 hours of each session and released publicly under CC0 or equivalent open source license. Expected data volume is approximately 2 GB per session at 1 MHz sample rate over 2.5 hours using complex float32 samples. Total across all sessions: approximately 8 GB. ORI requests waiver of the standard proprietary period. All data will be released immediately.
+
+RFI Considerations
+
+The National Radio Quiet Zone provides exceptional protection at both target frequencies. 1299.5 MHz and 2304 MHz are amateur radio allocations. The CAMRAS March 2025 experiment confirmed adequate RFI environment at Dwingeloo at 1299.5 MHz. The NRQZ environment at Green Bank is substantially cleaner. No significant terrestrial RFI is anticipated at either frequency
