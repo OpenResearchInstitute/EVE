@@ -69,7 +69,9 @@ Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhe
 
 Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. 
 
-Exact observation windows within each session date will be scheduled to maximize simultaneous visibility from participating transmitting stations. GBO scheduling staff will be consulted (and heeded) during the observing script preparation phase.
+Exact observation windows within each session date will be scheduled to maximize simultaneous visibility from participating transmitting stations. GBO scheduling staff will be consulted (and heeded) during the observing script preparation phase. 
+
+Venus is a solar system object. Coordinates given are approximate at inferior conjunction. It is anticipated that GBT will track Venus using its solar system ephemeris during observations. 
 
 Total time request: 4 sessions x 2.75 hours = 11 hours.
 
