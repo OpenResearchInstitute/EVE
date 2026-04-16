@@ -61,19 +61,19 @@ Observation Sessions and Time Request
 
 Venus remains within 10 percent of minimum distance from approximately October 7 through November 12, 2026, with CNR in 1 Hz exceeding +13 dB throughout this period. Four sessions are proposed to provide scheduling flexibility, Venus surface longitude diversity, and dual-frequency coverage. We are asking for 2.5 hours within each of the following four data ranges. 
 
-Session A1: October 19-20, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation approximately 32 degrees at Green Bank and approximately 20 degrees at Dwingeloo.
+Session A1: October 19-20, 1299.5 MHz (L-band), 2.5 hours plus 30 minutes overhead, elevation approximately 32 degrees at Green Bank and approximately 20 degrees at Dwingeloo.
 
-Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.54 dB (at conjunction distance), elevation 33 degrees at Green Bank and approximately 33 degrees at DSES. 
+Session B1: October 22-23 (conjunction), 2304 MHz (S-band), 2.5 hours plus 30 minutes overhead, CNR in 1 Hz +15.54 dB (at conjunction distance), elevation 33 degrees at Green Bank and approximately 33 degrees at DSES. 
 
-Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 15 minutes overhead, elevation 34 degrees at Green Bank and approximately 21 degrees at Dwingeloo.
+Session A2: October 25-26, 1299.5 MHz (L-band), 2.5 hours plus 30 minutes overhead, elevation 34 degrees at Green Bank and approximately 21 degrees at Dwingeloo.
 
-Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 15 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. 
+Session B2: October 31 to November 1, 2304 MHz (S-band), 2.5 hours plus 30 minutes overhead, CNR in 1 Hz +15.29 dB (at session distance), elevation 37 degrees at Green Bank and approximately 35 degrees at DSES. 
 
-Exact observation windows within each session date will be scheduled to maximize simultaneous visibility from participating transmitting stations. GBO scheduling staff will be consulted (and heeded) during the observing script preparation phase. 
+Exact observation windows within each session date will be scheduled to maximize simultaneous visibility from participating transmitting stations. For example, sessions A1 and A2 require coordination with the Dwingeloo telescope (CAMRAS). B1 and B2 include DSES. Observation windows will be scheduled during periods of simultaneous Venus visibility from both sites on the session dates. Final scheduling coordination with transmitting stations will occur after proposal acceptance and is ORI's responsibility. GBO scheduling staff will be consulted (and heeded) during the observing script preparation phase. 
 
-Venus is a solar system object. Coordinates given are approximate at inferior conjunction. It is anticipated that GBT will track Venus using its solar system ephemeris during observations. 
+Venus is a solar system object. Coordinates given in the sources section are approximate at inferior conjunction. It is anticipated that GBT will track Venus using its solar system ephemeris during the four observation windows. 
 
-Total time request: 4 sessions x 2.75 hours = 11 hours.
+Total time request: 4 sessions of 2.5 hours with 0.5 hours overhead = 12 hours.
 
 Sessions A2 and B1 are separated by three days at nearly identical Venus distance and elevation, enabling direct frequency comparison with minimal geometric change between observations. Any two sessions constitute a scientifically complete result. The four-session structure is a scheduling convenience, not a scientific requirement.
 
