@@ -1,0 +1,60 @@
+Subject: Target of Opportunity request — Venus EVE radar reception at Effelsberg, October 2026
+
+Dear Dr. Kraus,
+
+Uwe Bach suggested I contact you directly regarding a target of opportunity
+proposal for the Effelsberg 100-m telescope. Since the NorthStar portal is
+currently offline for maintenance and the next regular deadline in September
+falls after our observing window, Uwe recommended we approach you with a ToO
+request.
+
+The Open Research Institute (ORI) requests Effelsberg observing time during
+the October 2026 Venus inferior conjunction to receive the bistatic radar
+reflection from Venus transmitted by the Dwingeloo 25-m telescope (CAMRAS) at
+1299.5 MHz, and optionally from additional transmitting stations at 2304 MHz.
+This builds directly on the successful March 2025 Dwingeloo-Stockert EVE
+experiment and extends it with the 100-m aperture Effelsberg provides.
+
+Request summary:
+
+  - Two L-band sessions: Dwingeloo transmitting at 1299.5 MHz, Effelsberg
+    receiving with P217mm 7-Beam central horn. Requested dates approximately
+    October 19-20 and October 25-26, 2026.
+
+  - Two S-band sessions: one or more 2304 MHz transmitters (AMSAT-DL Bochum
+    20-m is the primary candidate, with additional North American stations
+    potentially participating), Effelsberg receiving with P170mm UBB.
+    Requested dates approximately October 22-23 (inferior conjunction) and
+    October 31 to November 1, 2026.
+
+  - Total time request: 4 sessions × 2.5 hours + 0.5 hours overhead each = 12
+    hours. Any two sessions constitute a scientifically complete result.
+
+ORI handles all coordination with transmitting stations and data reduction.
+Raw IQ data will be recorded in SigMF format and released publicly with no
+proprietary period. MPIfR's operational role is telescope pointing, receiver
+configuration, and IQ recording — no special operational support is required
+beyond standard observing procedures.
+
+Attached:
+
+  - Science justification (E_science_justification.txt)
+  - Technical justification including link budget (E_technical_justification.txt)
+  - AI usage disclosure (E_ai_usage_disclosure.txt)
+
+I would welcome the opportunity to answer questions, provide additional
+technical detail, or revise the proposal based on Program Committee feedback.
+If a Zoom or phone conversation would be useful before a decision, I am happy
+to make time.
+
+Thank you for considering this request.
+
+Best regards,
+
+Michelle Thompson, W5NYV
+CEO / CTO, Open Research Institute
+https://www.openresearch.institute
+Email: [your email]
+Phone: [your phone]
+
+cc: Uwe Bach (ubach@mpifr-bonn.mpg.de)

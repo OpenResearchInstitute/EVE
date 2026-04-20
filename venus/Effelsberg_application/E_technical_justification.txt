@@ -1,0 +1,271 @@
+Technical Justification
+
+Receiver Configuration
+
+Two receivers are requested for this proposal. Both are prime-focus
+receivers, enabling relatively fast receiver changes between session types
+(~30 minutes nominal per MPIfR wiki).
+
+Sessions A1 and A2 (1299.5 MHz): P217mm 7-Beam receiver (1260-1510 MHz),
+central horn. The central horn provides dual circular polarization (LCP/RCP)
+simultaneously, which matches Dwingeloo's RHCP transmit and allows
+simultaneous recovery of both opposite-circular (OC, expected quasi-specular
+echo) and same-circular (SC, depolarized roughness return) polarizations.
+With the EDD backend, the central horn is the operational configuration;
+the six outer horns are not required for this experiment.
+
+Sessions B1 and B2 (2304 MHz): P170mm UBB receiver (1.3-6.0 GHz). The UBB is
+the only operational Effelsberg receiver that covers 2304 MHz. It provides
+two linear polarization channels. Linear-to-circular polarization synthesis
+in post-processing follows the methodology published for the March 2025
+CAMRAS/Stockert experiment, where two linear channels were combined with a
+measured phase offset to yield circular polarization.
+
+Backend: The Effelsberg Direct Digitisation (EDD) system is the preferred
+backend, with raw IQ recording at a sample rate sufficient to cover the
+expected Doppler-shifted return. At 2304 MHz the maximum expected Doppler
+shift is approximately plus or minus 150 kHz. At 1299.5 MHz approximately
+plus or minus 85 kHz. A 1 MHz recording bandwidth provides comfortable guard
+band at both frequencies. If direct IQ recording at 1 MHz bandwidth is not
+supported in the standard EDD configuration, we would welcome guidance from
+MPIfR on an appropriate alternative (wider bandwidth recording with offline
+decimation is fully acceptable).
+
+IQ data will be recorded to disk in SigMF format for offline analysis and
+immediate public release. We request confirmation from Effelsberg staff of
+the exact center frequency, bandwidth, and recording format prior to the
+observation sessions. We are prepared to work with Effelsberg support staff
+on observing script preparation.
+
+Link Budget
+
+The bistatic link budget uses the monostatic radar range equation adapted
+for the bistatic case:
+
+  Pr = Pt * Gt * Gr * lambda^2 * sigma / ((4*pi)^3 * R^4)
+
+where sigma = rho_eff * pi * R_venus^2, and rho_eff is the disk-integrated
+effective radar albedo computed from the Magellan GREDR reflectivity map
+for the specific sub-Earth longitude at each observation date.
+
+Assumed parameters (explicitly flagged for MPIfR confirmation):
+
+  - Effelsberg aperture efficiency at 1299.5 MHz: 0.65 (assumed,
+    conservative). ACTUAL VALUE TO BE CONFIRMED BY MPIfR.
+  - Effelsberg aperture efficiency at 2304 MHz: 0.60 (assumed, conservative
+    for UBB wideband feed at mid-band). ACTUAL VALUE TO BE CONFIRMED BY
+    MPIfR.
+  - System temperature Tsys at 1299.5 MHz (P217mm central horn): 30 K
+    assumed (working value, within the range expected for a modern cooled
+    L-band receiver on a 100-m dish). ACTUAL VALUE TO BE CONFIRMED BY MPIfR.
+  - System temperature Tsys at 2304 MHz (P170mm UBB): 35 K assumed.
+    Published lab measurements give ~25 K; on-sky measurements with the
+    post-filter UBB at mid-band should be closer to lab value.
+    ACTUAL VALUE TO BE CONFIRMED BY MPIfR at the requested frequency.
+  - TX and RX line losses: 0.5 dB each (1.0 dB total, assumed typical).
+
+The link budget margin scales directly with Tsys. The table below shows
+CNR in 1 Hz at minimum Venus distance (40.93 million km, October 22, 2026)
+for a range of Tsys values, so MPIfR can confirm from their measured
+numbers.
+
+Configuration 1 - L-band sessions (A1, A2)
+Transmitter: Dwingeloo 25m (CAMRAS), 1000 W at 1299.5 MHz (confirmed)
+Receiver: Effelsberg 100m, P217mm central horn
+
+  Transmit power: 1000 W (30.0 dBW)
+  TX antenna gain (25m, efficiency 0.69, 1299.5 MHz): 49.0 dB
+  RX antenna gain (100m, efficiency 0.65 assumed, 1299.5 MHz): 60.8 dB
+  Free space loss (two-way, 40.93 million km): 492.6 dB
+  Venus reflection gain: 164.3 dB
+  Venus radar albedo rho_eff (October 22, GREDR model): 0.1164 (-8.34 dB)
+  TX and RX line losses: -1.0 dB
+
+  Signal power at receiver input: -197.84 dBW
+
+  CNR in 1 Hz at minimum distance, by assumed Tsys:
+    Tsys = 20 K: CNR_1Hz = +17.76 dB (margin 7.76 dB over 10 dB threshold)
+    Tsys = 30 K: CNR_1Hz = +15.99 dB (margin 5.99 dB over 10 dB threshold)
+    Tsys = 50 K: CNR_1Hz = +13.77 dB (margin 3.77 dB over 10 dB threshold)
+
+  Doppler spread: 1.50 Hz at 1299.5 MHz
+  Coherence time: 0.667 seconds
+  Processing gain (coherent integration within coherence time, non-coherent
+    over session): approximately 28 dB over the 2.5 hour session.
+
+  At assumed Tsys = 30 K, total SNR after processing is well above the 10
+  dB detection threshold with substantial margin for detection of
+  structured waveforms, not just carrier tones.
+
+Configuration 2 - S-band sessions (B1, B2)
+Transmitter: Primary candidate is AMSAT-DL Bochum 20m at 250 W (status:
+transmitter currently being evaluated by the Bochum team; decision expected
+before September 2026). Additional North American stations including DSES
+(18.29m, 1500 W) are potential secondary transmitters.
+Receiver: Effelsberg 100m, P170mm UBB
+
+Representative case: Bochum 20m at 250 W, 2304 MHz
+
+  Transmit power: 250 W (23.98 dBW)
+  TX antenna gain (20m, efficiency 0.69 assumed, 2304 MHz): 52.1 dB
+  RX antenna gain (100m, efficiency 0.60 assumed, 2304 MHz): 65.4 dB
+  Free space loss (two-way, 40.93 million km): 503.9 dB
+  Venus reflection gain: 169.3 dB
+  Venus radar albedo rho_eff (October 22, GREDR model): 0.1164 (-8.34 dB)
+  TX and RX line losses: -1.0 dB
+
+  Signal power at receiver input: -202.46 dBW
+
+  CNR in 1 Hz at minimum distance, by assumed Tsys:
+    Tsys = 25 K: CNR_1Hz = +12.14 dB (margin 2.14 dB over 10 dB threshold)
+    Tsys = 35 K: CNR_1Hz = +10.69 dB (margin 0.69 dB over 10 dB threshold)
+    Tsys = 55 K: CNR_1Hz = +8.73 dB (below threshold at 1 Hz)
+
+  Doppler spread: 2.66 Hz at 2304 MHz
+  Coherence time: 0.376 seconds
+  Processing gain (coherent integration within coherence time, non-coherent
+    over session): approximately 26 dB over the 2.5 hour session.
+
+  Even in the conservative Tsys = 55 K case, post-processing SNR
+  comfortably exceeds the 10 dB detection threshold. At the expected Tsys
+  of 25-35 K, detection of structured waveforms is well supported.
+
+Alternative case: DSES 18.29m at 1500 W, 2304 MHz
+
+For reference, a larger North American transmitter at higher power closes
+the link with significantly more margin:
+
+  Signal power at receiver input: -195.45 dBW
+  CNR in 1 Hz at Tsys = 35 K: +17.70 dB (margin 7.70 dB over threshold)
+
+Coordination with multiple 2304 MHz transmitters is under discussion. The
+proposal requests Effelsberg receive time; transmitter arrangements are
+ORI's responsibility.
+
+Observation Sessions and Time Request
+
+Venus remains within 10 percent of minimum distance from approximately
+October 7 through November 12, 2026, with CNR in 1 Hz exceeding +13 dB at
+Effelsberg throughout this period (for Configuration 1 at nominal Tsys).
+Four sessions are proposed to provide scheduling flexibility, Venus surface
+longitude diversity, and dual-frequency coverage. We request 2.5 hours for
+each session plus 30 minutes of overhead.
+
+  Session A1: October 19-20, 1299.5 MHz (L-band, P217mm), 2.5 hours + 0.5
+  hours overhead. Venus elevation at Effelsberg approximately 23 degrees
+  at upper culmination.
+
+  Session B1: October 22-23 (inferior conjunction), 2304 MHz (S-band, UBB),
+  2.5 hours + 0.5 hours overhead. Venus elevation at Effelsberg
+  approximately 24 degrees at upper culmination.
+
+  Session A2: October 25-26, 1299.5 MHz (L-band, P217mm), 2.5 hours + 0.5
+  hours overhead. Venus elevation at Effelsberg approximately 25 degrees.
+
+  Session B2: October 31 to November 1, 2304 MHz (S-band, UBB), 2.5 hours
+  + 0.5 hours overhead. Venus elevation at Effelsberg approximately 28
+  degrees.
+
+The four session dates above match the date range of ORI's parallel GBT
+proposal for the same campaign, so that scientific results across receive
+stations can be compared on identical Venus surface geometry. However, the
+UTC hours within each date will be selected for European station
+visibility (Dwingeloo and Bochum to Effelsberg) rather than for the GBT
+observation hours. Longitude separation between the European and North
+American stations means the Effelsberg observation time within a given
+date will typically differ from the GBT observation time by several hours.
+The date range is aligned; the hours within each date are picked
+independently for each receive site based on its mutual visibility with
+the relevant transmitter.
+
+Sessions A1 and A2 require coordination with the Dwingeloo telescope
+(CAMRAS). Sessions B1 and B2 require coordination with one or more 2304
+MHz transmitting stations. Observation windows will be scheduled during
+periods of simultaneous Venus visibility. Final scheduling coordination
+with transmitting stations is ORI's responsibility and will occur after
+proposal acceptance. Effelsberg scheduling staff will be consulted during
+the observing script preparation phase.
+
+Venus is a solar system object. Coordinates given in the sources section
+are approximate at inferior conjunction. It is anticipated that Effelsberg
+will track Venus using its solar system ephemeris during the observation
+windows.
+
+Total time request: 4 sessions of 2.5 hours with 0.5 hours overhead each
+= 12 hours.
+
+Sessions A2 and B1 are separated by three days at nearly identical Venus
+distance and elevation, enabling direct frequency comparison with minimal
+geometric change between observations. Any two sessions constitute a
+scientifically complete result. The four-session structure is a scheduling
+convenience, not a scientific requirement. If Program Committee allocation
+is constrained, we would prioritize in the following order:
+
+  1. Session A1 (1299.5 MHz, Dwingeloo confirmed transmitter)
+  2. Session B1 (2304 MHz, near conjunction, maximum signal)
+  3. Session A2 (1299.5 MHz, second L-band opportunity)
+  4. Session B2 (2304 MHz, extended baseline)
+
+Dependency on 2304 MHz Transmitter
+
+Sessions B1 and B2 depend on confirmation of a 2304 MHz transmitting
+station. AMSAT-DL Bochum is the primary candidate. If no qualified
+transmitter confirms by September 1, 2026, ORI will inform MPIfR and
+withdraw the S-band session requests. Withdrawal of B1 and B2 has no impact
+on the primary science objective (L-band detection at Configuration 1).
+
+Round-Trip Timing
+
+At inferior conjunction (approximately 40.9 million km), the one-way light
+travel time is approximately 136 seconds, giving a round-trip delay of
+approximately 272 seconds. Effelsberg will record continuously for the full
+session window. Transmitting stations coordinate transmission schedules
+with ORI in advance. Effelsberg requires no real-time knowledge of the
+transmission schedule. All timing analysis is performed offline using the
+recorded SigMF files and published ephemeris data.
+
+Data Products and Volume
+
+Effelsberg will record raw IQ data in SigMF format or equivalent. Data will
+be transferred to ORI within 48 hours of each session and released publicly
+under CC0 or equivalent open source license. Expected data volume is
+approximately 2 GB per session at 1 MHz sample rate over 2.5 hours using
+complex float32 samples. Total across all four sessions: approximately 8
+GB. ORI requests waiver of any standard proprietary period. All data will
+be released immediately upon reduction.
+
+RFI Considerations
+
+The Effelsberg site's natural valley shielding provides substantial RFI
+protection at both target frequencies. 1299.5 MHz and 2304 MHz are amateur
+radio allocations in Region 1 (Europe). The CAMRAS March 2025 experiment
+confirmed adequate RFI environment at Dwingeloo at 1299.5 MHz. The 2304 MHz
+band is below the 2.4 GHz ISM allocation and should benefit from
+Effelsberg's valley shielding relative to urban sites. We are not aware of
+known RFI sources at either frequency that would compromise the
+measurement, but we welcome guidance from MPIfR on their current RFI
+environment at both target frequencies.
+
+Stations and Sources
+
+Effelsberg 100-m Radio Telescope
+  Location: 50 deg 31' 29.4" N, 6 deg 53' 01.0" E, 369 m elevation
+  Operational elevation range: 8.1 to 89 degrees
+
+Dwingeloo 25-m Radio Telescope (CAMRAS), PI9RD
+  Location: 52.812 N, 6.396 E, 70 m elevation
+  Confirmed 1000 W transmitter at 1299.5 MHz (RHCP)
+  Successful Venus EVE reflection demonstrated March 22, 2025
+
+AMSAT-DL Bochum 20-m Radio Telescope
+  Location: 51.427 N, 7.193 E, 205 m elevation
+  Transmitter status for October 2026: under evaluation
+
+DSES 18.29-m (Deep Space Exploration Society), Colorado USA
+  Location: 38.381 N, -103.156 E, 1311 m elevation
+  Potential secondary 2304 MHz transmitter, 1500 W
+
+Venus at inferior conjunction October 22, 2026 00:00 UTC:
+  Approximate distance from Earth: 40.9 million km
+  Sub-Earth longitude in GREDR frame: approximately 332 degrees East
+  Effective disk-integrated radar albedo: 0.1164 (-8.34 dB)

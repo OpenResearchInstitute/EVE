@@ -1,0 +1,16 @@
+AI Usage Disclosure
+
+Several versions of AI were used by some of the contributors to the link
+analysis and proposal preparation to help debug the Python notebook, search
+scientific literature, and prepare proposal text. Claude, Gemini, and
+ChatGPT were all used to fix syntax errors, eliminate duplicate
+calculations, search scientific literature, run Monte Carlo analyses,
+locate documentation for Python imports, and help improve matplotlib
+visualizations. AI was also used to help locate Effelsberg receiver
+documentation and MPIfR wiki resources during proposal preparation.
+
+All scientific claims, link budget calculations, and technical decisions in
+this proposal have been reviewed and verified by the human authors. All
+parameter values flagged as "to be confirmed by MPIfR" are explicitly
+identified so that Program Committee and Observatory staff can substitute
+their measured values during scheduling and observation preparation.
