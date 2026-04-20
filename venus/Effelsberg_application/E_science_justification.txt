@@ -1,96 +1,30 @@
 Scientific Justification
 
-Earth-Venus-Earth radar experiments have produced foundational planetary
-science. The professional astronomy EVE campaigns of the 1960s and 1970s
-established Venus's rotation period, retrograde rotation direction, and
-initial results on surface roughness and radar albedo. The 2012 Arecibo/GBT
-bistatic radar campaign produced high-resolution surface maps that remain a
-primary reference for Venus geology. The disk-integrated radar albedo of
-Venus is well characterized at 1-2 GHz at approximately 0.152 (Goldstein &
-Carpenter 1963; Evans 1968), but no ground-based measurements at 2304 MHz
-exist outside of professional campaigns. The Magellan spacecraft's Global
-Reflectivity Data Record (GREDR) provides surface reflectivity maps in a
-compatible frequency regime, enabling quantitative comparison between
-ground-based radar returns and known surface features including Maxwell
-Montes (radar albedo ~0.75) and Aphrodite Terra (~0.35). ORI uses the
-Magellan maps in our EVE link analysis to determine dynamic albedo.
+Earth-Venus-Earth radar experiments have produced foundational planetary science. The professional astronomy EVE campaigns of the 1960s and 1970s established Venus's rotation period, retrograde rotation direction, and initial results on surface roughness and radar albedo. The 2012 Arecibo/GBT bistatic radar campaign produced high-resolution surface maps that remain a primary reference for Venus geology. The disk-integrated radar albedo of Venus is well characterized at 1-2 GHz at approximately 0.152 (Goldstein & Carpenter 1963; Evans 1968), but no ground-based measurements at 2304 MHz exist outside of professional campaigns. The Magellan spacecraft's Global Reflectivity Data Record (GREDR) provides surface reflectivity maps in a compatible frequency regime, enabling quantitative comparison between ground-based radar returns and known surface features including Maxwell Montes (radar albedo ~0.75) and Aphrodite Terra (~0.35). ORI uses the Magellan maps in our EVE link analysis to determine dynamic albedo.
 
 Why is October 2026 Important?
 
-Venus inferior conjunctions happen every 584 days. At inferior conjunction,
-Venus reaches minimum Earth distance of approximately 40 million km. This
-produces received signal power roughly 44 dB stronger than at the maximum
-distance of 261 million km. The October 22, 2026 inferior conjunction is a
-brief opportunity. The next comparable window does not occur until June 2028.
+Venus inferior conjunctions happen every 584 days. At inferior conjunction, Venus reaches minimum Earth distance of approximately 40 million km. This produces received signal power roughly 44 dB stronger than at the maximum distance of 261 million km. The October 22, 2026 inferior conjunction is a brief opportunity. The next comparable window does not occur until June 2028.
 
-The sub-Earth longitude at the October 2026 conjunction is approximately
-332 degrees East in the GREDR frame, placing the sub-radar point over plains
-southwest of Aphrodite Terra. Link budget modeling using the Magellan GREDR
-map yields an effective disk-integrated radar albedo of 0.1164 for this
-geometry. The sub-radar longitude rotates at approximately 1.7 degrees per
-day as seen from Earth, meaning each observation window samples a distinct
-surface region. Multi-session observations are therefore scientifically
-complementary rather than redundant.
+The sub-Earth longitude at the October 2026 conjunction is approximately 332 degrees East in the GREDR frame, placing the sub-radar point over plains southwest of Aphrodite Terra. Link budget modeling using the Magellan GREDR map yields an effective disk-integrated radar albedo of 0.1164 for this geometry. The sub-radar longitude rotates at approximately 1.7 degrees per day as seen from Earth, meaning each observation window samples a distinct surface region. Multi-session observations are therefore scientifically complementary rather than redundant.
 
 Scientific Objectives
 
 This experiment pursues three objectives of increasing ambition.
 
-The primary goal is detection and characterization of the Venus radar echo
-at 1299.5 MHz with substantially greater sensitivity than was available in
-the March 2025 CAMRAS experiment, and first detection at 2304 MHz by a
-non-professional bistatic radar campaign. No citizen science or amateur
-detection at 2304 MHz has been reported. A confirmed detection establishes
-the first independent ground-based measurement of Venus radar cross section
-at 13 cm wavelength outside of professional campaigns, providing a new data
-point for surface roughness models.
+The primary goal is detection and characterization of the Venus radar echo at 1299.5 MHz with substantially greater sensitivity than was available in the March 2025 CAMRAS experiment, and first detection at 2304 MHz by a non-professional bistatic radar campaign. No citizen science or amateur detection at 2304 MHz has been reported. A confirmed detection establishes the first independent ground-based measurement of Venus radar cross section at 13 cm wavelength outside of professional campaigns, providing a new data point for surface roughness models.
 
-The secondary goal is frequency comparison between 1299.5 MHz and 2304 MHz
-returns from the same conjunction window. The ratio of radar cross sections
-at the two frequencies constrains the frequency dependence of Venus surface
-scattering, sensitive to surface dielectric properties and roughness scale
-relative to wavelength. The March 2025 CAMRAS experiment provides a directly
-comparable baseline dataset at 1299.5 MHz.
+The secondary goal is frequency comparison between 1299.5 MHz and 2304 MHz returns from the same conjunction window. The ratio of radar cross sections at the two frequencies constrains the frequency dependence of Venus surface scattering, sensitive to surface dielectric properties and roughness scale relative to wavelength. The March 2025 CAMRAS experiment provides a directly comparable baseline dataset at 1299.5 MHz.
 
-The third goal is to be the first demonstration of open-source
-spread-spectrum digital waveforms via Venus reflection. Open Research
-Institute has developed M-ary orthogonal signaling waveforms for this
-channel, with Monte Carlo bit error rate simulations suggesting 0.1 to 1.0
-information bits per second at the operating carrier-to-noise ratio. At 4
-minutes per transmission burst, this yields approximately 120 to 240
-information bits. More than sufficient for legal callsign, timestamp, and
-message content. Participating stations should be able to close the
-communications link. Link budget modeling with Effelsberg as receive station
-shows the link closes under coherent integration alone with substantial
-margin above the detection threshold. With a variety of 18-25 meter dishes
-transmitting and receiving across the campaign, having Effelsberg receive
-significantly reduces the risk of failing to close the link at any one
-particular smaller receiver.
+The third goal is to be the first demonstration of open-source spread-spectrum digital waveforms via Venus reflection. Open Research Institute has developed M-ary orthogonal signaling waveforms for this channel, with Monte Carlo bit error rate simulations suggesting 0.1 to 1.0 information bits per second at the operating carrier-to-noise ratio. At 4 minutes per transmission burst, this yields approximately 120 to 240 information bits. More than sufficient for legal callsign, timestamp, and message content. Participating stations should be able to close the communications link. Link budget modeling with Effelsberg as receive station shows the link closes under coherent integration alone with substantial margin above the detection threshold. With a variety of 18-25 meter dishes transmitting and receiving across the campaign, having Effelsberg receive significantly reduces the risk of failing to close the link at any one particular smaller receiver.
 
 Why were March 2025 Results Important as a Precedent?
 
-On March 22, 2025, CAMRAS successfully reflected a 1299.5 MHz CW signal off
-Venus using the 25m Dwingeloo telescope, with the Stockert 25m telescope as
-a secondary receive station. Dr. Daniel Estevez's analysis confirmed
-detection of the reflected signal, characterized the Doppler spread as
-approximately plus or minus 0.75 Hz, and validated Doppler prediction models
-to within a few mHz (Estevez 2025). Stockert's reception, achieved at 13 km
-line-of-sight from Effelsberg with a 25-m aperture and linear-to-circular
-polarization synthesis, provides an existence proof in Effelsberg's own
-geometric and atmospheric context. This result directly validates the
-experimental approach proposed here. The October 2026 conjunction offers
-another opportunity for improved waveform design, a second frequency, and
-substantially greater receive sensitivity through Effelsberg participation.
+On March 22, 2025, CAMRAS successfully reflected a 1299.5 MHz CW signal off Venus using the 25m Dwingeloo telescope, with the Stockert 25m telescope as a secondary receive station. Dr. Daniel Estevez's analysis confirmed detection of the reflected signal, characterized the Doppler spread as approximately plus or minus 0.75 Hz, and validated Doppler prediction models to within a few mHz (Estevez 2025). Stockert's reception, achieved at 13 km line-of-sight from Effelsberg with a 25-m aperture and linear-to-circular polarization synthesis, provides an existence proof in Effelsberg's own geometric and atmospheric context. This result directly validates the experimental approach proposed here. The October 2026 conjunction offers another opportunity for improved waveform design, a second frequency, and substantially greater receive sensitivity through Effelsberg participation.
 
 Why Effelsberg?
 
-The 100m aperture of the Effelsberg telescope provides approximately 12 dB
-of receive advantage over the 25m Dwingeloo and Stockert telescopes and
-approximately 14 dB over the 20m Bochum telescope. This margin enables
-confident detection of structured digital waveforms, not just a carrier
-tone, and remains positive across all candidate transmitting stations
-including smaller dishes at lower power. This opens the experiment up to a
-larger number of citizen scientist participants.
+The 100m aperture of the Effelsberg telescope provides approximately 12 dB of receive advantage over the 25m Dwingeloo and Stockert telescopes and approximately 14 dB over the 20m Bochum telescope. This margin enables confident detection of structured digital waveforms, not just a carrier tone, and remains positive across all candidate transmitting stations including smaller dishes at lower power. This opens the experiment up to a larger number of citizen scientist participants.
 
 Beyond aperture, Effelsberg offers four specific advantages for this
 campaign:
@@ -126,26 +60,13 @@ campaign:
 
 Receiver Compatibility
 
-P217mm 7-Beam (central horn): 1260-1510 MHz, dual circular polarization
-(LCP/RCP), prime focus. Covers 1299.5 MHz with matched polarization to
-Dwingeloo's RHCP transmit. With the EDD backend, the central horn alone is
-available, which is sufficient for this experiment.
+P217mm 7-Beam (central horn): 1260-1510 MHz, dual circular polarization (LCP/RCP), prime focus. Covers 1299.5 MHz with matched polarization to Dwingeloo's RHCP transmit. With the EDD backend, the central horn alone is available, which is sufficient for this experiment.
 
-P170mm UBB: 1.3-6.0 GHz, dual linear polarization, prime focus. Covers both
-1299.5 MHz and 2304 MHz. For this proposal, UBB is specified for the 2304
-MHz sessions. Linear-to-circular polarization synthesis follows the
-methodology published for the March 2025 CAMRAS/Stockert experiment.
+P170mm UBB: 1.3-6.0 GHz, dual linear polarization, prime focus. Covers both 1299.5 MHz and 2304 MHz. For this proposal, UBB is specified for the 2304 MHz sessions. Linear-to-circular polarization synthesis follows the methodology published for the March 2025 CAMRAS/Stockert experiment.
 
 Open Science Value
 
-All recorded data will be released immediately upon acquisition in SigMF
-format under standard open source licensing via the Open Research Institute
-data archive. Analysis software, link budget notebooks, ephemeris
-calculations, and the Magellan GREDR albedo mapper used to design this
-experiment are publicly available at github.com/OpenResearchInstitute/EVE
-under open licenses. This experiment engages the international amateur radio
-and radio astronomy communities in a scientifically productive planetary
-radar campaign.
+All recorded data will be released immediately upon acquisition in SigMF format under standard open source licensing via the Open Research Institute data archive. Analysis software, link budget notebooks, ephemeris calculations, and the Magellan GREDR albedo mapper used to design this experiment are publicly available at github.com/OpenResearchInstitute/EVE under open licenses. This experiment engages the international amateur radio and radio astronomy communities in a scientifically productive planetary radar campaign.
 
 References
 

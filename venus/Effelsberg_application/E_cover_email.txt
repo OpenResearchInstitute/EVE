@@ -33,7 +33,7 @@ Request summary:
 ORI handles all coordination with transmitting stations and data reduction.
 Raw IQ data will be recorded in SigMF format and released publicly with no
 proprietary period. MPIfR's operational role is telescope pointing, receiver
-configuration, and IQ recording — no special operational support is required
+configuration, and IQ recording. No special operational support is required
 beyond standard observing procedures.
 
 Attached:
@@ -45,16 +45,17 @@ Attached:
 I would welcome the opportunity to answer questions, provide additional
 technical detail, or revise the proposal based on Program Committee feedback.
 If a Zoom or phone conversation would be useful before a decision, I am happy
-to make time.
+to make time. All of us at ORI will do all we can to make the most of this
+opportunity, and to ensure the success of all participants.
 
-Thank you for considering this request.
+Thank you so much for considering this request.
 
-Best regards,
+Yours,
 
 Michelle Thompson, W5NYV
-CEO / CTO, Open Research Institute
+CEO, Open Research Institute
 https://www.openresearch.institute
-Email: [your email]
-Phone: [your phone]
+Email: ori@openresearch.institute
+Phone: +1 858 229 3399 (text welcome)
 
 cc: Uwe Bach (ubach@mpifr-bonn.mpg.de)
