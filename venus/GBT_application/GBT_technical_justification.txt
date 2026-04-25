@@ -8,9 +8,7 @@ Sessions A1 and A2 (1299.5 MHz): L-band receiver (Rcvr1_2, 1.15 to 1.73 GHz), cu
 
 Sessions B1 and B2 (2304 MHz): S-band receiver (Rcvr2_3, 1.73 to 2.6 GHz), currently available.
 
-Backend: VEGAS configured for a 1 MHz bandwidth centered on the predicted Doppler-shifted return frequency. At 2304 MHz the maximum expected Doppler shift is approximately plus or minus 150 kHz. At 1299.5 MHz approximately plus or minus 85 kHz. A 1 MHz recording bandwidth provides comfortable guard band at both frequencies. IQ data will be recorded to disk in SigMF format for offline analysis and immediate public release.
-
-We request confirmation from GBO staff of the exact center frequency and bandwidth configuration for IQ recording via VEGAS prior to observation. We are prepared to work with the GBO helpdesk on observing script preparation.
+Backend: GBT data will be recorded using the JPL Radar backend (GBT Proposer's Guide, Section 4.3.7, p. 27), which is designed for planetary radar receive applications and provides wideband IQ recording with configurable frequency and time resolution. We have configured the backend with 1.0 kHz frequency resolution and 10 millisecond time resolution, providing sufficient spectral coverage to capture the Venus echo across the full expected Doppler shift range (plus or minus 85 kHz at 1299.5 MHz, plus or minus 150 kHz at 2304 MHz) while preserving the time resolution needed for offline coherent integration. The coherence time of 0.667 seconds at 1299.5 MHz and 0.376 seconds at 2304 MHz sets the maximum coherent integration interval. All data will be released in SigMF format under CC0 and/or GPL 3.0 immediately upon acquisition.
 
 Link Budget
 
@@ -92,3 +90,11 @@ GBT will record raw IQ data in SigMF format. Data will be transferred to ORI wit
 RFI Considerations
 
 The National Radio Quiet Zone provides exceptional protection at both target frequencies. 1299.5 MHz and 2304 MHz are amateur radio allocations. The CAMRAS March 2025 experiment confirmed adequate RFI environment at Dwingeloo at 1299.5 MHz. The NRQZ environment at Green Bank is substantially cleaner. No significant terrestrial RFI is anticipated at either frequency
+
+
+
+
+
+Action Item:
+
+Observation Type requested was for wideband continuum recording of the Venus radar echo. We need the widest available bandwidth centered on the target frequency. We request GBO staff guidance on backend configuration for raw IQ baseband recording, which is required for offline coherent integration analysis with a coherence time of 0.376 seconds at 2304 MHz and 0.667 seconds at 1299.5 MHz.

@@ -10,11 +10,7 @@ The sub-Earth longitude at the October 2026 conjunction is approximately 332 deg
 
 Scientific Objectives 
 
-This experiment pursues three objectives of increasing ambition.
-The primary goal is detection and characterization of the Venus radar echo at 2304 MHz. No citizen science or amateur detection at this frequency has been reported. A confirmed detection establishes the first independent ground-based measurement of Venus radar cross section at 13 cm wavelength outside of professional campaigns, providing a new data point for surface roughness models.
-The secondary goal is frequency comparison between 1299.5 MHz and 2304 MHz returns from the same conjunction window. The ratio of radar cross sections at the two frequencies constrains the frequency dependence of Venus surface scattering, sensitive to surface dielectric properties and roughness scale relative to wavelength. The March 2025 CAMRAS experiment provides a directly comparable baseline dataset at 1299.5 MHz.
-
-And, the third goal is to be the first demonstration of open-source spread-spectrum digital waveforms via Venus reflection. Open Research Institute has developed M-ary orthogonal signaling waveforms for this channel, with Monte Carlo bit error rate simulations suggesting 0.1 to 1.0 information bits per second (depending on frequency) at the operating carrier-to-noise ratio. At 4 minutes per transmission burst, this yields approximately 120 to 240 information bits. More than sufficient for legal callsign, timestamp, and message content. Participation stations should be able to close the communications link. However, link budget modeling with GBT as receive station shows the link closes under coherent integration alone with a substantial margin above the detection threshold. With a variety of 18-25 meter dishes transmitting and receiving, having GBT receive would significantly reduce risk of failing to close the link at any one particular receiver. 
+The primary goal is detection and characterization of the Venus radar echo at 2304 MHz. No citizen science or amateur detection at this frequency has been reported. A confirmed detection establishes the first independent ground-based measurement of Venus radar cross section at 13 cm wavelength outside of professional campaigns, providing a new data point for surface roughness models. The secondary goal is frequency comparison between 1299.5 MHz and 2304 MHz returns from the same conjunction window. The ratio of radar cross sections at the two frequencies constrains the frequency dependence of Venus surface scattering, sensitive to surface dielectric properties and roughness scale relative to wavelength. The March 2025 CAMRAS experiment provides a directly comparable baseline dataset at 1299.5 MHz. And, the third goal is to be the first demonstration of open-source spread-spectrum digital waveforms via Venus reflection. Open Research Institute has developed M-ary orthogonal signaling waveforms for this channel, with Monte Carlo bit error rate simulations suggesting 0.1 to 1.0 information bits per second (depending on frequency) at the operating carrier-to-noise ratio. At 4 minutes per transmission burst, this yields approximately 120 to 240 information bits. More than sufficient for legal callsign, timestamp, and message content. Participation stations should be able to close the communications link. However, link budget modeling with GBT as receive station shows the link closes under coherent integration alone with a substantial margin above the detection threshold. With a variety of 18-25 meter dishes transmitting and receiving, having GBT receive would significantly reduce risk of failing to close the link at any one particular receiver. 
 
 Why were March 2025 Results Important as a Precedent?
 
@@ -24,12 +20,9 @@ Why GBT?
 
 The GBT's 100m aperture provides approximately 12 dB of receive advantage over the 25m Dwingeloo and Stockert telescopes and approximately 14 dB over the 20m Bochum telescope. Bochum, Dwingeloo, and Stockert are all expected to participate as receive stations, with Bochum also potentially transmitting at 2304 MHz pending equipment availability.
 
-Bistatic link budget modeling confirms GBT closes the link under coherent integration alone for both frequency configurations. For L-band sessions (Dwingeloo transmitting at 1299.5 MHz), CNR in 1 Hz at minimum distance is +14.42 dB with 12.66 dB of margin above the 10 dB threshold. For S-band sessions (DSES transmitting at 2304 MHz), CNR in 1 Hz at minimum distance is +17.02 dB with 12.77 dB of margin. The remarkably similar margins across both configurations reflect the channel physics — lower L-band antenna gain is offset by longer 
-coherence time, while higher S-band antenna gain is partially offset by shorter coherence time.
+Bistatic link budget modeling confirms GBT closes the link under coherent integration alone for both frequency configurations. For L-band sessions (Dwingeloo transmitting at 1299.5 MHz), CNR in 1 Hz at minimum distance is +14.42 dB with 12.66 dB of margin above the 10 dB threshold. For S-band sessions (DSES transmitting at 2304 MHz), CNR in 1 Hz at minimum distance is +17.02 dB with 12.77 dB of margin. The remarkably similar margins across both configurations reflect the channel physics — lower L-band antenna gain is offset by longer coherence time, while higher S-band antenna gain is partially offset by shorter coherence time.
 
 This margin enables more confident detection of structured digital waveforms, not just a carrier tone, and remains positive across all candidate transmitting stations including smaller dishes at lower power. This opens the experiment up to a larger number of citizen scientist participants. 
-
-The S-band receiver covers 2304 MHz and the L-band receiver covers 1299.5 MHz. The National Radio Quiet Zone provides a uniquely clean RF environment at both frequencies, which is particularly valuable at 2304 MHz where terrestrial interference is a concern at European sites.
 
 Open Science Value
 
@@ -38,11 +31,7 @@ All recorded data will be released immediately upon acquisition in SigMF format 
 References 
 
 CAMRAS (2025). First Venus bounce with the Dwingeloo telescope. camras.nl/en/blog/2025/first-venus-bounce-with-the-dwingeloo-telescope/
-
 Estevez, D. (2025). Analysis of the CAMRAS Venus radar experiment. destevez.net/2025/04/analysis-of-the-camras-venus-radar-experiment/
-
 Evans, J. V. (1968). Variations in the radar cross section of Venus. Journal of Research of the National Bureau of Standards, Section D, 72D.
-
 Goldstein, R. M. and Carpenter, R. L. (1963). Rotation of Venus: Period estimated from radar measurements. Science, 139(3558), 910-911.
-
 Open Research Institute (2026). EVE link budget and analysis repository. github.com/OpenResearchInstitute/EVE
