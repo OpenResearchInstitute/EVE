@@ -1,0 +1,165 @@
+EVE 2026
+Effelsberg-Centered Session Schedule
+Open Research Institute
+Last updated: 2026-04-20
+
+This schedule is centered on Effelsberg as the primary receive station. It is complementary to the GBT-centered schedule (GBT_session_schedule.txt). Volunteer transmitting stations (Dwingeloo, DSES, Bochum) are encouraged to target both schedules where their equipment and availability permit.
+
+S-band sessions (B1, B2) are designated as open slots for any European
+station with 2304 MHz transmit capability. Dwingeloo has confirmed a feed focus problem at 2304 MHz and cannot transmit at this frequency.
+Bochum may be able to transmit at 2304 MHz pending equipment funding.
+Other European stations are welcome to participate.
+
+NOTE: Effelsberg participation is pending confirmation from MPIfR.
+All Effelsberg parameters are marked #VERIFY in the link budget notebook.
+
+Contact: Uwe Bach, MPIfR (email sent, guidance given, proposal sent).
+
+======================================================================
+SESSION A1 — L-band, 1299.5 MHz
+======================================================================
+Date:                       October 19-20, 2026
+Effelsberg recording block: 10:51–13:51 UTC (3 hours including overhead)
+Science time:               2.5 hours
+Overhead:                   30 minutes
+Effelsberg receiver:        S45mm or equivalent L-band feed (#VERIFY with MPIfR)
+Effelsberg elevation:       approximately 20 degrees at peak
+
+Transmitting station:       Dwingeloo 25m (CAMRAS), 1299.5 MHz, 1000W
+Dwingeloo+Effelsberg window: 09:46–14:26 UTC (4.7 hours)
+Dwingeloo elevation:        approximately 20 degrees at peak
+Echo arrival at Effelsberg: 13:32–14:28 UTC (Dwingeloo window + 136s round trip)
+
+Note: Effelsberg and Dwingeloo are ~350 km apart and have nearly identical Venus visibility windows. Recording block centered on shared window. Effelsberg records independently. No real-time coordination required.
+
+GBT companion window (if accepted): 12:28–15:28 UTC
+Overlap with Effelsberg block: 12:28–13:51 UTC (~1.4 hours)
+Two independent 100m dishes recording simultaneously during overlap.
+
+
+======================================================================
+SESSION B1 — S-band, 2304 MHz (inferior conjunction)
+======================================================================
+Date:                       October 22-23, 2026
+Effelsberg recording block: 10:13–13:13 UTC (3 hours including overhead)
+Science time:               2.5 hours
+Overhead:                   30 minutes
+Effelsberg receiver:        S-band equivalent (#VERIFY with MPIfR)
+Effelsberg elevation:       approximately 20 degrees at peak
+
+Transmitting station:       OPEN SLOT — European 2304 MHz transmitter welcome
+                            Bochum (Astropeiler) pending equipment funding
+                            Other European stations invited to participate
+Dwingeloo+Effelsberg window: 08:54–14:31 UTC (5.6 hours)
+Echo arrival at Effelsberg: transmission window + 136s round trip
+
+Note: Dwingeloo cannot transmit at 2304 MHz (confirmed feed focus problem). Any European amateur station with 2304 MHz capability and a dish of 10m+ is encouraged to contact ORI to coordinate transmission during this window.
+
+github.com/OpenResearchInstitute/EVE
+
+GBT companion window (if accepted): 15:00–18:00 UTC
+No overlap with Effelsberg block — independent datasets from same day.
+
+
+======================================================================
+SESSION A2 — L-band, 1299.5 MHz
+======================================================================
+Date:                       October 25-26, 2026
+Effelsberg recording block: 10:17–13:17 UTC (3 hours including overhead)
+Science time:               2.5 hours
+Overhead:                   30 minutes
+Effelsberg receiver:        S45mm or equivalent L-band feed (#VERIFY with MPIfR)
+Effelsberg elevation:       approximately 21 degrees at peak
+
+Transmitting station:       Dwingeloo 25m (CAMRAS), 1299.5 MHz, 1000W
+Dwingeloo+Effelsberg window: 08:58–14:35 UTC (5.6 hours)
+Dwingeloo elevation:        approximately 21 degrees at peak
+Echo arrival at Effelsberg: 12:45–14:37 UTC (Dwingeloo window + 136s round trip)
+
+Note: October 25 is the closest approach date (0.2728 AU) and best CNR day.
+Effelsberg and Dwingeloo have comfortable shared window of 5.6 hours.
+
+GBT companion window (if accepted): 12:09–15:09 UTC
+Overlap with Effelsberg block: 12:09–13:17 UTC (~1.1 hours)
+Two independent 100m dishes recording simultaneously during overlap.
+
+
+======================================================================
+SESSION B2 — S-band, 2304 MHz
+======================================================================
+Date:                       October 31–November 1, 2026
+Effelsberg recording block: 09:01–12:01 UTC (3 hours including overhead)
+Science time:               2.5 hours
+Overhead:                   30 minutes
+Effelsberg receiver:        S-band equivalent (#VERIFY with MPIfR)
+Effelsberg elevation:       approximately 20 degrees at peak
+
+Transmitting station:       OPEN SLOT — European 2304 MHz transmitter welcome
+                            Bochum (Astropeiler) pending equipment funding
+                            Other European stations invited to participate
+Dwingeloo+Effelsberg window: 07:14–13:48 UTC (6.6 hours)
+Echo arrival at Effelsberg: transmission window + 136s round trip
+
+Note: Dwingeloo cannot transmit at 2304 MHz (confirmed feed focus problem).
+October 31 has the longest Dwingeloo+Effelsberg window of the campaign
+at 6.6 hours. Most flexible session for European scheduling.
+
+GBT companion window (if accepted): 15:00–18:00 UTC
+No overlap with Effelsberg block — independent datasets from same day.
+
+
+======================================================================
+SUMMARY
+======================================================================
+Total sessions:             4
+Effelsberg recording time:  12 hours (4 x 3.0 hours)
+Total science time:         10 hours (4 x 2.5 hours)
+Total overhead:             2 hours (4 x 30 minutes)
+
+Session A1: October 19-20  — L-band 1299.5 MHz — Effelsberg 10:51-13:51 UTC
+Session B1: October 22-23  — S-band 2304 MHz   — Effelsberg 10:13-13:13 UTC
+Session A2: October 25-26  — L-band 1299.5 MHz — Effelsberg 10:17-13:17 UTC
+Session B2: October 31-Nov1 — S-band 2304 MHz  — Effelsberg 09:01-12:01 UTC
+
+
+======================================================================
+PST SOURCE ENTRIES (geocentric J2000, center of each recording block)
+======================================================================
+Venus_A1_Eff; EVE2026; Equatorial; J2000; 13:53:24.2; -19:16:41.0; Barycentric; Optical; 0.0; n;
+Venus_B1_Eff; EVE2026; Equatorial; J2000; 13:47:06.0; -18:18:12.4; Barycentric; Optical; 0.0; n;
+Venus_A2_Eff; EVE2026; Equatorial; J2000; 13:40:43.1; -17:10:42.8; Barycentric; Optical; 0.0; n;
+Venus_B2_Eff; EVE2026; Equatorial; J2000; 13:29:32.6; -14:45:10.3; Barycentric; Optical; 0.0; n;
+
+Distances at each session:
+  Venus_A1_Eff: 0.2773 AU (41.48 Mkm)
+  Venus_B1_Eff: 0.2738 AU (40.96 Mkm) — inferior conjunction
+  Venus_A2_Eff: 0.2728 AU (40.81 Mkm) — closest approach / best day
+  Venus_B2_Eff: 0.2787 AU (41.69 Mkm)
+
+Note: Coordinates are geocentric for scheduler reference only.
+Effelsberg will track Venus using its internal solar system ephemeris.
+
+
+======================================================================
+GBT AND EFFELSBERG OVERLAP WINDOWS
+======================================================================
+Sessions A1 and A2 have partial overlap between GBT and Effelsberg
+recording blocks — two independent 100m dishes on the same echo:
+
+  A1 (Oct 19): GBT 12:28-15:28 UTC, Effelsberg 10:51-13:51 UTC
+               Overlap: 12:28-13:51 UTC (~1.4 hours)
+
+  A2 (Oct 25): GBT 12:09-15:09 UTC, Effelsberg 10:17-13:17 UTC
+               Overlap: 12:09-13:17 UTC (~1.1 hours)
+
+Sessions B1 and B2 have no overlap — GBT observes in the afternoon UTC, Effelsberg observes in the morning UTC. Independent datasets same day.
+
+
+======================================================================
+OPEN ITEMS
+======================================================================
+- Effelsberg participation: Uwe Bach email response pending (#VERIFY all params)
+- European 2304 MHz transmitter for B1 and B2: open invitation
+- Bochum 2304 MHz transmit capability: confirm with Peter
+- Effelsberg L-band and S-band receiver details: confirm with MPIfR
+- Effelsberg system noise temperature at operating frequencies need verification
