@@ -147,69 +147,116 @@ module sma_nut() { cylinder(h=sma_nut_t, d=sma_nut_d, $fn=6); }
 // PRODUCTION PRINTABLE FLAT PATTERNS (Collision-Free Updates)
 // ============================================================
 
+
+// ============================================================
+// FIXED OK1DFC SEPTUM TEMPLATE WITH DRILL MARKERS (SOLID RECTANGLE)
+// ============================================================
 module printable_septum_with_drill_markers() {
     translate([-30, 0]) square(); // 20mm Calibration Check
-    difference() {
-        union() {
-            translate([15, 0]) {
-                polygon(points=[
-                    [0, sF], [sA, sF], [sA, sG], [sB, sG], [sB, sH], 
-                    [sC, sH], [sD, sI], [sD, sJ], [sE, sJ], [sE, wg_id], 
-                    [body_len, wg_id], [body_len, 0],
-                ]);
-            }
-            translate([0, -15])   square([body_len + 15, 15]);   
-            translate([0, wg_id]) square([body_len + 15, 15]);   
-        }
-        for (z = [40 : 15 : body_len + 5]) {
-            translate([z, -7.5])       circle(d=1.0, $fn=16); 
-            translate([z, wg_id + 7.5]) circle(d=1.0, $fn=16); 
-        }
-    }
-    color("red") square([body_len + 15, 0.2]);
-    color("red") translate([0, wg_id]) square([body_len + 15, 0.2]);
-}
-
-module printable_symmetrical_clamshell_template_v4() {
-    translate([-30, 0]) square(); 
-    difference() {
-        square([body_len + 15, 171]); 
-        translate([0, 0])        square([15, 15]);
-        translate([0, 171 - 15]) square([15, 15]);
-        
-        pz = 15 + (body_len - probe_z_from_end); 
-        translate([pz, 86.5]) circle(d=sma_hole_d, $fn=32);
-            
-        for (z = [40 : 15 : body_len + 5]) {
-            translate([z, 7.5])       circle(d=1.0, $fn=16); 
-            translate([z, 171 - 7.5]) circle(d=1.0, $fn=16);
-        }
-    }
-    color("red") translate([15, 15])                 square([body_len, 0.2]);       
-    color("red") translate([0, 15 + 35])              square([body_len + 15, 0.2]);  
-    color("red") translate([0, 15 + 35 + 73])         square([body_len + 15, 0.2]);  
-    color("red") translate([15, 15 + 35 + 73 + 35])   square([body_len, 0.2]);       
-}
-
-module printable_final_flare_panel() {
-    translate([-30, 0]) square(); 
-    slant_height = flare_len / cos(flare_ang); 
-    w_small      = wg_od;                     
-    w_large      = flare_od;                   
     
     difference() {
         union() {
-            polygon(points=[[0, -w_small/2], [0, w_small/2], [slant_height, w_large/2], [slant_height, -w_large/2]]);
-            translate([-15, -w_small/2]) square([15, w_small]);
+            // THE COMPLETE INTERNAL STEPPED STAIRCASE (Fully Closed Symmetrical Loop)
+            polygon(points=[
+                [15,       sF],    // 1. Step 1 starts at Z=15 (mouth), height 5.5mm
+                [15 + sA,  sF],    // 2. Flat segment of Step 1
+                [15 + sA,  sG],    // 3. Rises to Step 2 (height 13.8mm)
+                [15 + sB,  sG],    // 4. Flat segment of Step 2
+                [15 + sB,  sH],    // 5. Rises to Step 3 (height 23.5mm)
+                [15 + sC,  sH],    // 6. Flat segment of Step 3
+                [15 + sC,  sI],    // 7. Rises to Step 4 (height 33.3mm)
+                [15 + sD,  sI],    // 8. Flat segment of Step 4
+                [15 + sD,  sJ],    // 9. Rises to Step 5 (height 43.1mm)
+                [15 + sE,  sJ],    // 10. Flat segment of Step 5
+                [15 + sE,  wg_id], // 11. Rises vertically up to full waveguide height (73.0mm)
+                [354,      wg_id], // 12. Runs perfectly flat to the back wall at Z=354mm (No trailing comma!),     
+                [354,      0],     // 13. Drops straight down the back short wall to the floor (Y=0)
+                [15,       0]      // 14. Returns completely straight along the floor to the front mouth
+            ]);
+            
+            // THE TWO EXTERNAL FLANGE CLAMPING BORDERS
+            translate([15, -15])   square([324, 15]);   // Bottom screw margin
+            translate([15, wg_id])  square([324, 15]);   // Top screw margin
         }
+        
+        // Symmetrical Screw Hole Crosshairs spaced every 15mm 
+        for (z = [40 : 15 : 334]) {
+            translate([z, -7.5])       circle(d=1.0, $fn=16); // Bottom flange holes
+            translate([z, wg_id + 7.5]) circle(d=1.0, $fn=16); // Top flange holes
+        }
+    }
+}
+
+module printable_symmetrical_clamshell_template_v4() {
+    translate([-30, 0]) square(); // 20mm Calibration Check
+    
+    // Sheet size is locked perfectly to 354mm long by 173mm wide
+    difference() {
+        square([354, 173]); 
+        
+        // FRONT NOTCHES (Z = 0 to 15) - Clears lips for front flare collar
+        translate([0, 0])        square([15, 15]);
+        translate([0, 173 - 15]) square([15, 15]);
+        
+        // REAR NOTCHES (Z = 339 to 354) - Clears lips for backshort cap collar
+        translate([339, 0])        square([15, 15]);
+        translate([339, 173 - 15]) square([15, 15]);
+        
+        // SMA Connector Drill Hole Center
+        // Placed 29.3mm from back wall (354 - 15 - 29.3 = 309.7mm)
+        translate([309.7, 86.5]) circle(d=sma_hole_d, $fn=32);
+            
+        // Flange Screw Holes (Synchronized to match the shortened septum ears)
+        for (z = [40 : 15 : 334]) {
+            translate([z, 7.5])       circle(d=1.0, $fn=16); 
+            translate([z, 173 - 7.5]) circle(d=1.0, $fn=16);
+        }
+    }
+    
+    // Scribe Alignment Reference Marks (Fold Indicator Lines)
+    color("black") translate([15, 15])         square([324, 0.5]); // Bend 1 (15mm)
+    color("black") translate([0, 15 + 35])     square([354, 0.5]); // Bend 2 (50mm)
+    color("black") translate([0, 15 + 35 + 73]) square([354, 0.5]); // Bend 3 (123mm)
+    color("black") translate([15, 15 + 35 + 73 + 35]) square([324, 0.5]); // Bend 4 (158mm)
+}
+
+// ============================================================
+// CORRECTED STRAIGHT-EDGE FLARE PANEL (100% Symmetrical)
+// ============================================================
+module printable_final_flare_panel() {
+    translate([-30, 0]) square(); // 20mm Calibration Gauge
+    
+    slant_height = flare_len / cos(flare_ang); // ~210.9 mm long
+    w_small      = wg_od;                     // 75.0 mm wide throat
+    w_large      = flare_od;                   // 184.2 mm wide mouth
+    
+    difference() {
+        union() {
+            // Main face of the flare (Centered on Y-axis)
+            polygon(points=[
+                [0,            -w_small/2], 
+                [0,             w_small/2], 
+                [slant_height,  w_large/2], 
+                [slant_height, -w_large/2]
+            ]);
+            
+            // THE MOUNTING COLLAR TAB (Correctly Centered on Y-Axis)
+            // Moves -15mm back on X, and centers perfectly from -37.5mm to +37.5mm on Y
+            translate([-15, -w_small/2]) 
+                square([15, w_small]);
+        }
+        
+        // Simple mounting screw holes centered in the tab zone
         translate([-7.5, -w_small/2 + 15]) circle(d=1.0, $fn=16);
         translate([-7.5,  w_small/2 - 15]) circle(d=1.0, $fn=16);
     }
+    
+    // Scribe bend indicator line (A perfect straight line across the tab)
     color("red") translate([0, -w_small/2]) square([0.2, w_small]);
 }
 
 module printable_flare_corner_brackets() {
-    translate([-30, 0]) square();
+    translate([-30, 0]) square([20, 20]);
     slant_height = flare_len / cos(flare_ang); 
     for (i = [0 : 3]) {
         translate([0, i * 35]) {
@@ -226,7 +273,7 @@ module printable_flare_corner_brackets() {
 }
 
 module printable_backshort_cap_template() {
-    translate([-30, 0]) square();
+    translate([-30, 0]) square([20, 20]);
     difference() {
         union() {
             translate([15, 15])  square([75, 75]);
@@ -246,18 +293,23 @@ module printable_backshort_cap_template() {
     color("red") translate([90, 15]) square([0.2, 75]);
 }
 
-// ============================================================
-// EXECUTION SWITCH BOARD
-// ============================================================
-// For standard 3D screen view, keep the top block uncommented:
 
-body_assembly();
-septum_plate();
-flare_assembly();
+// ============================================================
+// MASTER PRODUCTION OUTPUT CONTROLLER
+// ============================================================
+// For normal 3D verification on screen, leave these 3 lines uncommented:
+//body_assembly();
+//septum_plate();
+//flare_assembly();
 
-// To print templates, comment out the 3D block above and uncomment ONE below:
-// printable_symmetrical_clamshell_template_v4(); 
-// printable_final_flare_panel();                    
-// printable_septum_with_drill_markers();       
-// printable_flare_corner_brackets();           
-// printable_backshort_cap_template();          
+// TO EXPORT A 1:1 PDF TEMPLATE: 
+// 1. Comment out the 3 lines above using //
+// 2. Uncomment ONLY ONE line below at a time
+// 3. Press F6 (Render), then go to File > Export > Export as PDF...
+
+// printable_septum_with_drill_markers();         // Print 3-4 copies
+ printable_symmetrical_clamshell_template_v4(); // Print 2 copies
+// printable_final_flare_panel();                 // Print 4 copies
+// printable_flare_corner_brackets();             // Print 1 copy
+// printable_backshort_cap_template();            // Print 1 copy
+       
