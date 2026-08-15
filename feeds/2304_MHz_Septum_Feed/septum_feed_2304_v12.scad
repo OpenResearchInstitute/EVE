@@ -61,10 +61,14 @@ septum_len = tooth_z[4];                    // 208.35 -- septum tip to rear wall
 probe_len  = probe_len_ref * k;             // 24.75 (cut long, trim to match)
 probe_back = probe_back_ref * k;            // 24.19 from inside of rear wall
 feed_spec  = feed_total_ref * k;            // 338.63 spec cavity length
-// Septum thickness ideal = 1.04mm; 1.0mm stock is within tolerance [4].
+// Septum thickness ideal = 1.042mm (0.008*lambda, scaled from OK1DFC
+// 1.852 @ 23cm); 0.040" stock (-2.5%) is within tolerance [4].
+// DO NOT substitute thick stock (0.125"=3.175mm would be 3x design --
+// septum thickness is an RF dimension of the verified set, 0.008 lambda).
 
-t          = 1.016;                  // sheet thickness
-wg_od      = wg_id + 2*t;            // 83.51
+t          = 1.016;                  // wall sheet: 0.040" 3003-H14
+sept_t     = 1.016;                  // septum: cut from same 0.040" stock
+wg_od      = wg_id + 2*t;            // outside dim (both axes -- see below)
 
 // --- Tube length (build convenience, anchored at the REAR wall) ---
 // Sheet is 354 long: 15mm front collar-overlap zone + 339 cavity carried
@@ -121,8 +125,14 @@ BD90 = BD(90);     // 1.77
 // holes at 7.5-from-edge are coaxial by construction (v11 had a 1mm
 // misalignment here: ears were 15, must be t+15).
 flange_w   = 15.0;
-halfwall_o = wg_id/2 + t;            // 41.75 outside dim
-floor_o    = wg_od;                  // 83.51 outside dim
+// v12.1 FIX: the septum is SANDWICHED between the mated flanges, so it
+// adds sept_t to the assembled interior across the mating axis. Each
+// half channel must therefore be (wg_id - sept_t)/2 deep inside, so
+// that (wg_id-sept_t)/2 + sept_t + (wg_id-sept_t)/2 = wg_id exactly.
+// (Previous wg_id/2 depth would have built the guide sept_t oversize.)
+// Note the outside stays square: across mating axis = wg_id + 2t = wg_od.
+halfwall_o = (wg_id - sept_t)/2 + t; // outside dim
+floor_o    = wg_od;                  // outside dim
 
 b1 = flange_w - BD90/2;                        // 14.12
 b2 = b1 + halfwall_o - BD90;                   // 54.10
@@ -186,12 +196,63 @@ echo(BA90=BA(90), BD90=BD90, bracket_bend_from_flat=bracket_bend);
 echo(clamshell_bend_lines=[b1, b2, b3, b4], clamshell_flat_W=clam_W);
 echo("==== FLARE ====");
 echo(flare_id=flare_id, flare_len=flare_len, slant=slant);
-echo("==== CUT LIST (bounding, mm) -- 1mm 3003-H14 ====");
+echo("==== CUT LIST (bounding, mm) -- 0.040in (1.016mm) 3003-H14 ====");
 echo("2x clamshell half", [tube_len, clam_W]);
 echo("1x septum", [tube_len - collar_z, wg_id + 2*(t + flange_w)]);
 echo("4x flare panel", [slant + flange_w, flare_od]);
 echo("4x corner bracket", [slant, 25]);
 echo("1x backshort cap", [cap_face + 2*flange_w, cap_face + 2*flange_w]);
+
+// ============================================================
+// BEND BUILD SHEET -- human-readable brake instructions.
+// Recomputes from the CURRENT k_factor: after coupon calibration,
+// update k_factor above, press F5, and read this table again.
+// Registration convention (use IDENTICALLY on coupon and parts):
+//   scribe line = center of the bend arc. Register the scribe to
+//   your brake nose the same way every time, short leg protruding,
+//   folding up. The coupon calibrates BD *for that habit*.
+// ============================================================
+function r1(x) = round(x * 100) / 100;   // 0.01 mm display rounding
+
+echo("################ BEND BUILD SHEET ################");
+echo(str("Material: t=", t, " mm 3003-H14 | assumed inside R=", bend_R,
+         " | k=", k_factor));
+echo(str("Per-90deg bend: allowance BA=", r1(BA(90)),
+         " mm, deduction BD=", r1(BD90), " mm",
+         "  [ESTIMATE until coupon run]"));
+echo("--- STEP 0: COUPON (do this FIRST, 2x at 90deg grain) ---");
+echo(str("Coupon flat ", r1(2*20 + 40 - 2*BD90), " x 30 mm; scribes at ",
+         r1(20 - BD90/2), " and ", r1(20 + 40 - 1.5*BD90),
+         " from one end. Bend both up 90deg -> U-channel."));
+echo(str("TARGET inside width = 40.00 mm. If you measure W, then ",
+         "BD_actual = ", r1(BD90), " - (W - 40)/2. Solve k = ",
+         "(2*(R+t) - BD_actual)/(PI/2*t) - R/t, update k_factor, F5."));
+echo("--- CLAMSHELL HALF (make 2 identical) ---");
+echo(str("Flat blank: ", r1(tube_len), " x ", r1(clam_W),
+         " mm. All 4 bend lines parallel to the 354 mm edge,"));
+echo("ACROSS the sheet rolling grain. All folds UP 90deg, same face.");
+echo(str("Scribe from reference long edge:  B1=", r1(b1),
+         "   B2=", r1(b2), "   B3=", r1(b3), "   B4=", r1(b4)));
+echo("Bend order: B1, B4 (outer flanges first), then B2, B3.");
+echo(str("CHECK after bending (outside dims): flange ", r1(flange_w),
+         " | wall ", r1(halfwall_o), " | floor ", r1(wg_od),
+         " | wall ", r1(halfwall_o), " | flange ", r1(flange_w)));
+echo(str("CHECK inside channel: floor width ", r1(wg_id),
+         " between walls, wall depth ", r1(halfwall_o - t),
+         ". Two halves + ", sept_t, " mm septum between flanges -> ", r1(wg_id), " sq guide."));
+echo("--- FLARE PANEL COLLAR TABS (4 panels) ---");
+echo(str("15deg fold DOWN at ", r1(flange_w),
+         " mm from aperture edge (loose tolerance; BD at 15deg = ",
+         r1(BD(15)), " mm, already in pattern)."));
+echo("--- CORNER BRACKETS (make 4) ---");
+echo(str("Fold ", r1(bracket_bend), " deg along centerline of 25 mm strip",
+         " (12.5 mm from either edge). Loose tolerance."));
+echo(str("ASSEMBLY: panels have NO seam holes on purpose. Dry-fit ",
+         "pyramid, clamp, verify mouth = ", r1(flare_id),
+         " inside, MATCH-DRILL panels through bracket holes."));
+echo(str("GAUGE: septum full-height section is cut to ", r1(wg_id),
+         " mm -- it is your go/no-go gauge for the mated channel."));
+echo("##################################################");
 
 $fn = 64;
 
@@ -226,9 +287,9 @@ module body_assembly() {
 // back 145.65 from the front edge. Step 5 IS the full-height section.
 module septum_plate() {
     zs = [for (z = tooth_z) septum_tip + z];
-    translate([t/2, -wg_id/2, 0])
+    translate([sept_t/2, -wg_id/2, 0])
         rotate([0, -90, 0])
-            linear_extrude(t)
+            linear_extrude(sept_t)
                 polygon(points = [
                     [septum_tip, 0],
                     [septum_tip, tooth_h[0]],
@@ -352,6 +413,12 @@ module printable_flare_panel() {
 }
 
 // ---- CORNER BRACKETS (make 4) -- bend 86.16 deg from flat ----
+// NOTE: flare panels have NO holes along their slant edges BY DESIGN.
+// The bracket bend position, pyramid dihedral closure, and bracket
+// placement along the seam all stack; pre-cut panel holes would demand
+// they cancel. Instead the bracket holes are the drill jig: dry-fit the
+// pyramid, clamp, verify mouth = flare_id inside, then MATCH-DRILL the
+// panels through the bracket holes. (Same philosophy as collar/cap.)
 module printable_flare_corner_brackets() {
     for (i = [0 : 3])
         translate([0, i * 35]) {
@@ -413,9 +480,9 @@ module printable_bend_test_coupon() {
 // MASTER OUTPUT CONTROLLER
 // ============================================================
 // 3D check: uncomment the three lines below.
-body_assembly();
-septum_plate();
-flare_assembly();
+//body_assembly();
+//septum_plate();
+//flare_assembly();
 
 // DXF EXPORT (IMS laser): uncomment ONE module, F6, File > Export > DXF.
 // Quantities: coupon x1 (FIRST), clamshell x2, septum x1, flare panel x4,
@@ -425,4 +492,4 @@ flare_assembly();
 // printable_septum();
 // printable_flare_panel();
 // printable_flare_corner_brackets();
-// printable_backshort_cap();
+ printable_backshort_cap();
