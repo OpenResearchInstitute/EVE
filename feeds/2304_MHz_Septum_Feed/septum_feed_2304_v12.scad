@@ -349,6 +349,13 @@ module printable_septum() {
             translate([z, -ear + rail_edge_offset])        hole();
             translate([z,  wg_id + ear - rail_edge_offset]) hole();
         }
+        // rear corner notches (v12.1 fix, caught by paper model): cut the
+        // ears back to the wall OUTER surface over the last collar_z so
+        // the backshort cap skirt slips over the tube. Leaves the t-thick
+        // wall-slot sliver, flush with tube outside (cap_fit_clr clears it).
+        // Mirrors the clamshell rear flange notches.
+        translate([tube_len - collar_z, -ear])       square([collar_z, flange_w]);
+        translate([tube_len - collar_z, wg_id + t])  square([collar_z, flange_w]);
     }
 }
 
@@ -489,7 +496,7 @@ module printable_bend_test_coupon() {
 // brackets x1 sheet, cap x1.
 // printable_bend_test_coupon();
 // printable_clamshell_half();
-// printable_septum();
+ printable_septum();
 // printable_flare_panel();
 // printable_flare_corner_brackets();
- printable_backshort_cap();
+// printable_backshort_cap();
