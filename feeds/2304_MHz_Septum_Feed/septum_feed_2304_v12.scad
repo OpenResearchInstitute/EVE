@@ -107,8 +107,24 @@ sma_bulk_d  = 6.4;
 // ESTIMATES pending test coupon -- run printable_bend_test_coupon() first,
 // measure, and adjust bend_R / k_factor. Formulas: Machinery's Handbook.
 bend_R   = 1.0;    // inside radius. #MEASURE your brake nose radius
-k_factor = 0.42;   // R/t=1, soft aluminum. #CALIBRATE 0.40-0.45
+// --- COUPON CALIBRATION INPUT ---
+// After bending the 80x30 coupon, enter the measured INSIDE width here
+// and press F5. Leave at 0 to use the uncalibrated estimate below.
+// Measure wall to wall, not flat part of the bottom. 
 
+coupon_W = 0;      // mm, caliper inside jaws (e.g. 39.90). 0 = not yet run
+
+k_factor = (coupon_W == 0)
+    ? 0.42                                              // estimate: R/t=1, soft Al
+    : ((40 + 2*bend_R - coupon_W)*(2/PI) - bend_R)/t;   // solved from coupon
+
+// OK so what are we doing here?
+// The construction condition ? value_A : value_B is the ternary conditional
+// inherited from C. Read it aloud exactly as punctuated: "is coupon_W zero ?
+// then 0.42 : otherwise, the formula." It's an expression, not a statement. 
+// The whole thing evaluates to a single value, which then gets assigned.
+    
+    
 function BA(theta) = (theta * PI/180) * (bend_R + k_factor * t);      // allowance
 function BD(theta) = 2*(bend_R + t)*tan(theta/2) - BA(theta);          // deduction
 BD90 = BD(90);     // 1.77
@@ -219,14 +235,17 @@ echo(str("Material: t=", t, " mm 3003-H14 | assumed inside R=", bend_R,
          " | k=", k_factor));
 echo(str("Per-90deg bend: allowance BA=", r1(BA(90)),
          " mm, deduction BD=", r1(BD90), " mm",
-         "  [ESTIMATE until coupon run]"));
+         (coupon_W == 0 ? "  [ESTIMATE until coupon run]" : "  [calibrated]")));
 echo("--- STEP 0: COUPON (do this FIRST, 2x at 90deg grain) ---");
-echo(str("Coupon flat ", r1(2*20 + 40 - 2*BD90), " x 30 mm; scribes at ",
-         r1(20 - BD90/2), " and ", r1(20 + 40 - 1.5*BD90),
-         " from one end. Bend both up 90deg -> U-channel."));
-echo(str("TARGET inside width = 40.00 mm. If you measure W, then ",
-         "BD_actual = ", r1(BD90), " - (W - 40)/2. Solve k = ",
-         "(2*(R+t) - BD_actual)/(PI/2*t) - R/t, update k_factor, F5."));
+echo("Coupon flat: 80.00 x 30 mm; scribes at exactly 20.00 and 60.00.");
+echo("Bend both up 90deg -> U-channel. Round numbers are on the CUT;");
+echo(str("the calipers read the odd one: PREDICTED inside width = ",
+         r1(40 - BA(90) + 2*bend_R), " mm at current k=", k_factor, "."));
+echo(coupon_W == 0 ? "STATUS: UNCALIBRATED estimate -- set coupon_W after bend test" : str("STATUS: CALIBRATED from coupon_W = ", coupon_W, " mm"));
+echo(str("CALIBRATE: just set coupon_W above and press F5. (Math: BA_actual = ",
+         r1(40 + 2*bend_R), " - W;   k_factor = (BA_actual/(PI/2) - ",
+         bend_R, ")/", t, " -- done for you.)"));
+echo(str("Leg check: each outer leg ~", r1(20 + BD90/2), " mm outside."));
 echo("--- CLAMSHELL HALF (make 2 identical) ---");
 echo(str("Flat blank: ", r1(tube_len), " x ", r1(clam_W),
          " mm. All 4 bend lines parallel to the 354 mm edge,"));
@@ -477,10 +496,17 @@ module printable_backshort_cap() {
 // If the middle leg measures 40 + e, reduce k_factor by e/(2*BA(90)/1.42)
 // or simply iterate; then re-export all patterns.
 module printable_bend_test_coupon() {
-    L = 2*20 + 40 - 2*BD90;   // 76.46 flat
-    difference() { square([L, 30]); }
-    color("red") translate([20 - BD90/2, 0])        square([0.3, 30]);
-    color("red") translate([20 - BD90/2 + 40 - BD90, 0]) square([0.3, 30]);
+    // ROUND-NUMBER COUPON (v12.2): blank 80 x 30, scribes at exactly
+    // 20 and 60. Cut and mark to nice numbers; the ODD number is the
+    // predicted inside width, read with calipers after bending:
+    //   W_pred = 40 - BA(90) + 2*bend_R      (39.76 at current estimate)
+    // Calibration from measured W:
+    //   BA_actual = (40 + 2*bend_R) - W
+    //   k_factor  = (BA_actual/(PI/2) - bend_R) / t
+    // Leg check: each outer leg should measure 20 + BD/2 outside (~20.9).
+    difference() { square([80, 30]); }
+    color("red") translate([20, 0]) square([0.3, 30]);
+    color("red") translate([60, 0]) square([0.3, 30]);
 }
 
 // ============================================================
@@ -494,9 +520,9 @@ module printable_bend_test_coupon() {
 // DXF EXPORT (IMS laser): uncomment ONE module, F6, File > Export > DXF.
 // Quantities: coupon x1 (FIRST), clamshell x2, septum x1, flare panel x4,
 // brackets x1 sheet, cap x1.
-// printable_bend_test_coupon();
+ printable_bend_test_coupon();
 // printable_clamshell_half();
- printable_septum();
+// printable_septum();
 // printable_flare_panel();
 // printable_flare_corner_brackets();
 // printable_backshort_cap();
