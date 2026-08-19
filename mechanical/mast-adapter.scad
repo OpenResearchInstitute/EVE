@@ -3,6 +3,14 @@
 //Allows fitting of a Yaesu G-5500 style rotator
 //To an ITE tripod (T6, serial 4170)
 
+//============================================================
+//Plan:
+//scrap part is 116 mm in height and 57 mm in diameter.
+//bore out 41 mm diamter centered hole all the way through.
+//bore out 45 mm diamger centered hole 10 mm from base.
+//drill 9 mm diamter hole 50 mm from top (for anti-spin bolt). 
+//============================================================
+
 $fn = 100;
 
 //how high the mast adapter is suspended above stub.
