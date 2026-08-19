@@ -93,11 +93,11 @@ fc_te11 = fc_te10 * sqrt(2);                // 2601 MHz -- single mode at 2304
 // tuning screws, dimensional precision). Scaled 6mm -> 3.38mm.
 // K&S 1/8" (3.175mm) brass rod recommended. Cut 27mm, trim to match.
 probe_dia   = 3.175;                 // K&S 1/8" brass rod
-sma_hole_d  = 4.4;                   // #VERIFY center hole vs 132150 datasheet
+sma_hole_d  = 4.4;                   // VERIFIED 2026-08-18 (W5NYV: pattern standard, confirmed good)
 // Amphenol RF 132150 is a 4-hole flange jack (not a bulkhead-nut part).
-// #VERIFY flange pattern from the datasheet before laser release:
-sma_flange_hole_d   = 2.3;           // #VERIFY (2-56 clearance)
-sma_flange_pattern  = 8.64;          // #VERIFY hole-center square, 0.340"
+// VERIFIED 2026-08-18 by W5NYV against connectors in hand:
+sma_flange_hole_d   = 2.3;           // verified (2-56 clearance)
+sma_flange_pattern  = 8.64;          // verified hole-center square, 0.340"
 sma_style   = "flange4";             // "flange4" | "bulkhead" (6.4 single hole)
 sma_bulk_d  = 6.4;
 
@@ -249,7 +249,11 @@ echo(str("Leg check: each outer leg ~", r1(20 + BD90/2), " mm outside."));
 echo("--- CLAMSHELL HALF (make 2 identical) ---");
 echo(str("Flat blank: ", r1(tube_len), " x ", r1(clam_W),
          " mm. All 4 bend lines parallel to the 354 mm edge,"));
-echo("ACROSS the sheet rolling grain. All folds UP 90deg, same face.");
+echo("ACROSS the sheet rolling grain. NOTE: hat profile = alternating");
+echo("folds. B1,B4 (flanges) fold one way; FLIP the sheet; B2,B3 fold");
+echo("the other. Mark B1,B4 lines on one face, B2,B3 on the opposite");
+echo("face (each mark lands on the INSIDE of its own bend -- Sharpie).");
+echo("Keep one registration habit for all 4: scribe at nose, short side out.");
 echo(str("Scribe from reference long edge:  B1=", r1(b1),
          "   B2=", r1(b2), "   B3=", r1(b3), "   B4=", r1(b4)));
 echo("Bend order: B1, B4 (outer flanges first), then B2, B3.");
@@ -263,6 +267,11 @@ echo("--- FLARE PANEL COLLAR TABS (4 panels) ---");
 echo(str("15deg fold DOWN at ", r1(flange_w),
          " mm from aperture edge (loose tolerance; BD at 15deg = ",
          r1(BD(15)), " mm, already in pattern)."));
+echo("COLLAR TABS: all 4 tabs are pre-drilled, but only the 2 FLOOR");
+echo("faces of the tube have matching holes (single-part faces,");
+echo("deterministic). The 2 WALL faces are seam assemblies (two half-");
+echo("walls + septum rail, 4 bends) -- NO tube holes on purpose:");
+echo("seat flare on assembled tube, MATCH-DRILL through those tabs.");
 echo("--- CORNER BRACKETS (make 4) ---");
 echo(str("Fold ", r1(bracket_bend), " deg along centerline of 25 mm strip",
          " (12.5 mm from either edge). Loose tolerance."));
@@ -300,6 +309,36 @@ module back_plate() { translate([-wg_od/2, -wg_od/2, tube_len]) cube([wg_od, wg_
 
 module body_assembly() {
     wall_top(); wall_bottom(); wall_side(1); wall_side(-1); back_plate();
+}
+
+// ---- SMA LAUNCH (3D reference, both ports) ----
+// Rod seats on the PTFE inner face (extended-dielectric connector,
+// PTFE trimmed flush to inner wall). Pin + PTFE fill the wall crossing.
+// Flange body shown schematically. NOTE for simulation: everything
+// OUTSIDE the outer wall face (flange body, coax barrel) is replaced by
+// the port definition in the solver -- model PTFE + pin + rod only.
+sma_ptfe_d = 4.10;   // dielectric OD (fills the 4.4 hole, clearance fit)
+sma_pin_d  = 1.27;
+module launch_assembly() {
+    z_probe = tube_len - t - probe_back;   // rear wall inner face - setback
+    for (sgn = [1, -1]) {
+        xi = sgn * wg_id/2;                // inner wall face
+        xo = sgn * (wg_id/2 + t);          // outer wall face
+        // probe rod (brass): inner face -> inward
+        color("gold") translate([xi, 0, z_probe])
+            rotate([0, -sgn*90, 0]) cylinder(h = probe_len, d = probe_dia, $fn = 32);
+        // PTFE through the wall
+        color("white") translate([xo, 0, z_probe])
+            rotate([0, -sgn*90, 0]) cylinder(h = t, d = sma_ptfe_d, $fn = 32);
+        // pin through the wall
+        color("silver") translate([xo, 0, z_probe])
+            rotate([0, -sgn*90, 0]) cylinder(h = t + 2, d = sma_pin_d, $fn = 24);
+        // schematic connector flange + barrel outside
+        color("gray") translate([xo + sgn*0.8, 0, z_probe])
+            cube([1.6, 12.7, 12.7], center = true);
+        color("gray") translate([xo + sgn*1.6, 0, z_probe])
+            rotate([0, sgn*90, 0]) cylinder(h = 6, d = 6.35, $fn = 24);
+    }
 }
 
 // Septum: plane x=0, teeth rise from bottom wall (y=-wg_id/2), tip set
@@ -513,14 +552,15 @@ module printable_bend_test_coupon() {
 // MASTER OUTPUT CONTROLLER
 // ============================================================
 // 3D check: uncomment the three lines below.
-//body_assembly();
-//septum_plate();
-//flare_assembly();
+body_assembly();
+septum_plate();
+flare_assembly();
+launch_assembly();
 
 // DXF EXPORT (IMS laser): uncomment ONE module, F6, File > Export > DXF.
 // Quantities: coupon x1 (FIRST), clamshell x2, septum x1, flare panel x4,
 // brackets x1 sheet, cap x1.
- printable_bend_test_coupon();
+// printable_bend_test_coupon();
 // printable_clamshell_half();
 // printable_septum();
 // printable_flare_panel();
