@@ -320,7 +320,11 @@ module body_assembly() {
 sma_ptfe_d = 4.10;   // dielectric OD (fills the 4.4 hole, clearance fit)
 sma_pin_d  = 1.27;
 module launch_assembly() {
-    z_probe = tube_len - t - probe_back;   // rear wall inner face - setback
+    z_probe = probe_z;   // = tube_len - probe_back (rear wall INNER face is
+                         // at z=tube_len; back_plate sits outside the cavity).
+                         // v12.1 fix: earlier re-derivation subtracted an
+                         // extra t, offsetting the launch 1.016 mm from the
+                         // wall hole -- caught visually by W5NYV.
     for (sgn = [1, -1]) {
         xi = sgn * wg_id/2;                // inner wall face
         xo = sgn * (wg_id/2 + t);          // outer wall face
@@ -328,16 +332,16 @@ module launch_assembly() {
         color("gold") translate([xi, 0, z_probe])
             rotate([0, -sgn*90, 0]) cylinder(h = probe_len, d = probe_dia, $fn = 32);
         // PTFE through the wall
-        color("white") translate([xo, 0, z_probe])
-            rotate([0, -sgn*90, 0]) cylinder(h = t, d = sma_ptfe_d, $fn = 32);
+        //color("white") translate([xo, 0, z_probe])
+        //    rotate([0, -sgn*90, 0]) cylinder(h = t, d = sma_ptfe_d, $fn = 32);
         // pin through the wall
         color("silver") translate([xo, 0, z_probe])
             rotate([0, -sgn*90, 0]) cylinder(h = t + 2, d = sma_pin_d, $fn = 24);
         // schematic connector flange + barrel outside
-        color("gray") translate([xo + sgn*0.8, 0, z_probe])
-            cube([1.6, 12.7, 12.7], center = true);
-        color("gray") translate([xo + sgn*1.6, 0, z_probe])
-            rotate([0, sgn*90, 0]) cylinder(h = 6, d = 6.35, $fn = 24);
+        //color("gray") translate([xo + sgn*0.8, 0, z_probe])
+        //    cube([1.6, 12.7, 12.7], center = true);
+        //color("gray") translate([xo + sgn*1.6, 0, z_probe])
+        //    rotate([0, sgn*90, 0]) cylinder(h = 6, d = 6.35, $fn = 24);
     }
 }
 
