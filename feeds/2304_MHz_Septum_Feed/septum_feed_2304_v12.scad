@@ -332,16 +332,16 @@ module launch_assembly() {
         color("gold") translate([xi, 0, z_probe])
             rotate([0, -sgn*90, 0]) cylinder(h = probe_len, d = probe_dia, $fn = 32);
         // PTFE through the wall
-        //color("white") translate([xo, 0, z_probe])
-        //    rotate([0, -sgn*90, 0]) cylinder(h = t, d = sma_ptfe_d, $fn = 32);
+        color("white") translate([xo, 0, z_probe])
+            rotate([0, -sgn*90, 0]) cylinder(h = t, d = sma_ptfe_d, $fn = 32);
         // pin through the wall
         color("silver") translate([xo, 0, z_probe])
             rotate([0, -sgn*90, 0]) cylinder(h = t + 2, d = sma_pin_d, $fn = 24);
         // schematic connector flange + barrel outside
-        //color("gray") translate([xo + sgn*0.8, 0, z_probe])
-        //    cube([1.6, 12.7, 12.7], center = true);
-        //color("gray") translate([xo + sgn*1.6, 0, z_probe])
-        //    rotate([0, sgn*90, 0]) cylinder(h = 6, d = 6.35, $fn = 24);
+        color("gray") translate([xo + sgn*0.8, 0, z_probe])
+            cube([1.6, 12.7, 12.7], center = true);
+        color("gray") translate([xo + sgn*1.6, 0, z_probe])
+            rotate([0, sgn*90, 0]) cylinder(h = 6, d = 6.35, $fn = 24);
     }
 }
 
@@ -504,34 +504,44 @@ module printable_flare_corner_brackets() {
 
 // ---- BACKSHORT CAP ----
 module printable_backshort_cap() {
-    f  = cap_face;                       // 84.11 formed inside
-    fl = flange_w;
-    d  = BD90;                           // one 90 bend per flange
+    // v12.2 FIX: previous flat drew the face at cap_face with NO bend
+    // deduction -- folded, inside face-to-face came out cap_face - 2t
+    // (82.1), smaller than the 83.54 tube: cap would not fit. Correct
+    // pan development: outside face = cap_face + 2t; flat face region
+    // between bend lines = outside - BD; skirt flats = flange - BD/2.
+    fo = cap_face + 2*t;                 // formed OUTSIDE face dim
+    ff = fo - BD90;                      // flat face region (between bends)
+    fs = flange_w - BD90/2;              // flat skirt region
     difference() {
         union() {
-            translate([fl, fl])           square([f, f]);        // face
-            translate([fl, fl - fl + 0])  square([f, fl]);       // -y flange
-            translate([fl, fl + f])       square([f, fl]);       // +y flange
-            translate([0,  fl])           square([fl, f]);       // -x flange
-            translate([fl + f, fl])       square([fl, f]);       // +x flange
+            translate([fs, fs])          square([ff, ff]);       // face
+            translate([fs, 0])           square([ff, fs]);       // -y skirt
+            translate([fs, fs + ff])     square([ff, fs]);       // +y skirt
+            translate([0,  fs])          square([fs, ff]);       // -x skirt
+            translate([fs + ff, fs])     square([fs, ff]);       // +x skirt
         }
-        // 2 holes per flange at +/- wg_id/4 from face center,
-        // rail_edge_offset from flange tip
+        // CORNER RELIEFS (v12.3): circles centered on the bend-line
+        // intersections, r >= bend_R + t + 0.5 (vendor spec for
+        // perpendicular flanges; zero clearance = "bends intersect"
+        // rejection). r=2.5 gives margin. RF: 4 tiny corner nicks in
+        // the backshort face at zero-field corners -- negligible.
+        for (cx = [fs, fs + ff], cy = [fs, fs + ff])
+            translate([cx, cy]) circle(r = 2.5);
+        // 2 holes per skirt at +/- wg_id/4 from face center,
+        // rail_edge_offset from skirt tip
         for (s = [-1, 1]) {
-            // y flanges (land on floors -> matching laser holes in body)
-            translate([fl + f/2 + s * cap_hole_dy, rail_edge_offset])          hole();
-            translate([fl + f/2 + s * cap_hole_dy, 2*fl + f - rail_edge_offset]) hole();
-            // x flanges (land on half-wall pairs -> MATCH-DRILL body)
-            translate([rail_edge_offset,          fl + f/2 + s * cap_hole_dy]) hole();
-            translate([2*fl + f - rail_edge_offset, fl + f/2 + s * cap_hole_dy]) hole();
+            // y skirts (land on floors -> matching laser holes in body)
+            translate([fs + ff/2 + s * cap_hole_dy, rail_edge_offset])            hole();
+            translate([fs + ff/2 + s * cap_hole_dy, 2*fs + ff - rail_edge_offset]) hole();
+            // x skirts (land on half-wall pairs -> MATCH-DRILL body)
+            translate([rail_edge_offset,           fs + ff/2 + s * cap_hole_dy]) hole();
+            translate([2*fs + ff - rail_edge_offset, fs + ff/2 + s * cap_hole_dy]) hole();
         }
     }
-    // bend scribes at face perimeter (bend line = face edge - d/2 inward
-    // handled at the brake; scribe marks the mold line)
-    for (p = [[fl, fl, f, 0.3], [fl, fl + f, f, 0.3]])
-        color("red") translate([p[0], p[1]]) square([p[2], p[3]]);
-    for (p = [[fl, fl], [fl + f, fl]])
-        color("red") translate(p) square([0.3, f]);
+    // (v12.2: scribe rectangles removed -- they referenced deleted
+    // variables and exported as a stray 0.3mm contour outside the blank,
+    // which vendor DFM read as a second, below-minimum part. Bend lines
+    // for vendor upload are added by make_scs_flats.py as LINE entities.)
 }
 
 // ---- BEND TEST COUPON -- run FIRST, calibrate bend_R / k_factor ----
@@ -556,16 +566,15 @@ module printable_bend_test_coupon() {
 // MASTER OUTPUT CONTROLLER
 // ============================================================
 // 3D check: uncomment the three lines below.
-body_assembly();
-septum_plate();
-flare_assembly();
-launch_assembly();
+//body_assembly();
+//septum_plate();
+//flare_assembly();
 
 // DXF EXPORT (IMS laser): uncomment ONE module, F6, File > Export > DXF.
 // Quantities: coupon x1 (FIRST), clamshell x2, septum x1, flare panel x4,
 // brackets x1 sheet, cap x1.
 // printable_bend_test_coupon();
-// printable_clamshell_half();
+ printable_clamshell_half();
 // printable_septum();
 // printable_flare_panel();
 // printable_flare_corner_brackets();
