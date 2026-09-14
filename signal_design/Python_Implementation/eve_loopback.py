@@ -95,17 +95,40 @@ def spectrogram(iq, fs, path, title, cmap="magma", dyn_range=None):
         "axes.facecolor": "#0f1610", "axes.edgecolor": "#1fbf0a", "axes.labelcolor": "#c8ffc8",
         "axes.titlecolor": "#39ff14", "xtick.color": "#5f8f66", "ytick.color": "#5f8f66",
         "savefig.facecolor": "#0a0e0a", "figure.dpi": 130})
+    nfft = 4096                                   # fine bins -> good tone SNR
+    step = nfft // 2
+    nseg = max(1, 1 + (iq.size - nfft) // step)
+    win = np.hanning(nfft)
+    S = np.empty((nfft, nseg), dtype=float)
+    for i in range(nseg):
+        seg = iq[i*step:i*step+nfft]
+        if seg.size < nfft:
+            seg = np.pad(seg, (0, nfft-seg.size))
+        S[:, i] = np.fft.fftshift(np.abs(np.fft.fft(seg*win))**2)
+    SdB = 10*np.log10(S + 1e-20)
+    freqs = np.fft.fftshift(np.fft.fftfreq(nfft, 1/fs))
+    binhz = fs / nfft
+    # vertical dilation: thicken bright tone lines to ~180 Hz so they are visible pixels
+    k = max(1, int(round(90.0 / binhz)))
+    D = SdB.copy()
+    for sh in range(1, k+1):
+        D[:-sh] = np.maximum(D[:-sh], SdB[sh:]); D[sh:] = np.maximum(D[sh:], SdB[:-sh])
+    top = SdB.max()
+    lo = top - (dyn_range if dyn_range is not None else 28.0)
+    rowmax = SdB.max(axis=1); band = np.where(rowmax > top - 18)[0]
+    if band.size:
+        f0, f1 = freqs[band.min()], freqs[band.max()]; pad = 0.12*(f1-f0)+1500
+        ylo, yhi = f0-pad, f1+pad
+    else:
+        ylo, yhi = freqs[0], freqs[-1]
     fig, ax = plt.subplots(figsize=(11, 5.5))
-    nfft = 1 << int(np.log2(max(256, fs / tx.R_BW)))
-    Pxx, f, t, im = ax.specgram(iq, NFFT=nfft, Fs=fs, noverlap=nfft // 2,
-                                cmap=cmap, scale="dB")
-    floor = 10*np.log10(np.median(Pxx) + 1e-30)   # noise floor (dB)
-    peak  = 10*np.log10(Pxx.max() + 1e-30)         # brightest tone (dB)
-    lo = floor + 3.0 if dyn_range is None else peak - dyn_range
-    im.set_clim(lo, peak)                          # noise -> dark, tones -> bright
+    ax.imshow(D, origin="lower", aspect="auto", cmap=cmap, vmin=lo, vmax=top,
+              extent=[0, iq.size/fs, freqs[0], freqs[-1]], interpolation="nearest")
+    ax.set_ylim(ylo, yhi)
     ax.set_xlabel("time (s)"); ax.set_ylabel("baseband freq (Hz)")
     ax.set_title(title, fontsize=13, fontweight="bold")
-    fig.tight_layout(); fig.savefig(path); print("wrote", path)
+    fig.tight_layout(); fig.savefig(path)
+    print("wrote", path, "(peak %.0f dB, range %.0f dB, band %.0f..%.0f Hz)"%(top, top-lo, ylo, yhi))
 
 def write_sigmf(iq, fs, rf_hz, freq_offset, t_sym, out):
     inter = np.empty(iq.size * 2, dtype=np.float32); inter[0::2] = iq.real; inter[1::2] = iq.imag
