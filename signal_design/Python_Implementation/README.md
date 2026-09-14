@@ -1,10 +1,10 @@
-# ORI EVE transmit waveform
-
-_Pete Wyckoff's "Spiral" as a SigMF file_
+# ORI EVE transmit waveform -- Pete Wyckoff's "Spiral" as a SigMF file
 
 Generates a SigMF recording of Pete Wyckoff (KA3WCA) "Venus Bounce Transmitter
 Spiral #2" and plays it through a USRP B210 (GNU Radio or uhd). For the EME station
 test and for sharing with Dwingeloo / Stockert / Effelsberg. ASCII only.
+
+Abraxas3d September 2026
 
 ## Files
 - eve_tx_sigmf.py            generator (numpy + galois + sigmf)
@@ -26,7 +26,7 @@ Verified in code: every symbol's synthesized tone lands on d*5.74 Hz; constant
 envelope; BCH encode/decode round-trips; SigMF validates.
 
 ## Generate
-    pip install numpy galois sigma
+    pip install numpy galois sigmf
     # smoke test (short, to validate the chain / B210):
     python3 eve_tx_sigmf.py --smoke -o eve_spiral_smoke --freq-offset 25000
     # FULL design frame (~30 min). At 250 kSps this is ~3.6 GB; prefer a lower Fs
@@ -126,4 +126,57 @@ Knobs: n_frames, m, trials, coh_loss. This is the file to torture-test.
 Bottom line: the waveform is matched to the exact channel the link budget predicts.
 At the CAMRAS-measured +0.65 dB-Hz it closes with margin; at 0 dB-Hz it closes; the
 0-to-1 dB band is the design edge; and Dwingeloo-alone October (-1.33 dB-Hz) is below
-the edge, which is precisely the gap Effelsberg's +13 dB fills.
+the edge -- which is precisely the gap Effelsberg's +13 dB fills.
+
+## Monostatic operation for DSES (they hear their own echo) -- eve_tx_gated.py, eve_tx_rx_b210.py, eve_rx.py
+
+DSES runs one dish and wants to receive its own signal. A dish cannot receive while its
+PA is keyed, so each symbol is a separate TX burst; between bursts the PA is off, the
+sequencer switches the dish from PA to LNA, and DSES records its own echo one round trip
+later. This works because a symbol (164.794 s) is shorter than the Venus round trip
+(~272 s at 40.82 Mkm), so TX finishes ~107 s before the echo returns.
+
+LNA SAFETY (non-negotiable ordering; a hardware sequencer like the Kuhne SEQ 4 enforces it):
+  TX: PTT on -> PA on + relay DISH->PA (LNA isolated) -> settle -> RF on.
+  RX: RF off -> PA unkeys (guard) -> PTT off -> relay DISH->LNA -> settle -> RX on.
+  RF power is ZERO whenever the relay is in or moving to RX. Never reorder this.
+
+Workflow:
+  1. Build the schedule (prints TX/RX/PTT times, checks W<RTT and LNA safety):
+        python3 eve_tx_gated.py --distance-mkm 40.82 --tsym 164.794 -o eve_gated_venus
+     For the EME bench (shorter round trip), use short symbols and get a playable file:
+        python3 eve_tx_gated.py --eme --tsym 1.0 -o eve_gated_eme --write-iq
+  2. Run the station (HARDWARE BRING-UP REQUIRED; --dry-run prints the sequence first):
+        python3 eve_tx_rx_b210.py eve_gated_venus_schedule.json --rf 2304e6 --dry-run
+     It keys the sequencer via B210 GPIO, JIT-synthesizes each burst, then records the
+     echo to eve_rx_capture.sigmf-* . Verify GPIO pin / sequencer wiring / timing on the
+     bench at low power with a scope BEFORE going on the air.
+  3. Decode the capture:
+        python3 eve_rx.py eve_rx_capture.sigmf-meta --f-dopp <Hz> --f-rate <Hz/s>
+     Doppler shift + rate come from astropy for the path/time. Output: the 11 d_m, the
+     recovered message, and CRC OK/FAIL.
+
+Receiver (eve_rx.py) -- what to do with a recording:
+  remove Doppler (shift+rate) -> per symbol: frame at 1/R_bw, FFT, sum frame powers
+  non-coherently, pick the peak tone bin -> d_m -> BCH(127,106) decode -> CRC-16 check.
+  Self-test (TX -> simulated echo: Doppler + AWGN at C/N0=0 -> decode, recovers the
+  message with 11/11 symbols and CRC OK):
+        python3 eve_rx.py --selftest
+
+Message capacity: the payload is 90 message bits + 16 CRC = 106. That is ~11 ASCII
+characters. Keep the message short (a callsign and a tag).
+
+Bistatic note: Pete's own title is Dwingeloo-Venus-Stockert -- bistatic. If a second
+site receives, it just listens continuously (no TX/RX conflict, no gating) and you also
+get Effelsberg's big dish and the +13 dB. Gating is only needed when one dish must both
+transmit and receive.
+
+## Using a TWT instead of the 8 x 250 W harness -- see TWT_GUIDE.md
+Pete's waveform is constant-envelope (one tone at a time), so a SATURATED traveling-wave
+tube amplifies it with no penalty: proven in eve_twt.py / eve_link_check.py -- at
+C/N0 = 0 dB-Hz the message decodes 11/11 CRC-good through a saturated tube (fig_twt.png,
+fig_twt_compliance.png). One S-band TWTA run flat out (no back-off, no predistortion, no
+combiner, no phasing) replaces the entire 8-PA array and delivers more clean power.
+TWT_GUIDE.md documents EXACTLY how: drive-to-saturation procedure, gate-the-drive-not-
+the-beam, T/R + LNA protection, isolator/VSWR tube protection, HIGH-VOLTAGE SAFETY, a
+bench acceptance test, and an operating checklist. Read it fully before keying.
