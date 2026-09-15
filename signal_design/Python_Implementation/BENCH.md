@@ -1,5 +1,9 @@
 # EVE bench loopback -- test TX + RX + decode in the remote lab
 
+> ON A MAC (Apple Silicon)? See **MAC_STATION.md** first for UHD install, the B210
+> USB-morph quirk, and why we drive the radio via UHD's CLI binaries (no Python bindings).
+
+
 One command exercises the whole chain and draws a spectrogram (a software spectrum
 analyzer). Works with NO hardware (software channel) or with a real B210 over a cable.
 ASCII only.
