@@ -3,10 +3,52 @@
 > ON A MAC (Apple Silicon)? See **MAC_STATION.md** first for UHD install, the B210
 > USB-morph quirk, and why we drive the radio via UHD's CLI binaries (no Python bindings).
 
+This is an attempt to write down bench test results. MAC_STATION.md has the steps that
+worked on that particular computer, for the Hello Giggy EME station build. 
 
 One command exercises the whole chain and draws a spectrogram (a software spectrum
 analyzer). Works with NO hardware (software channel) or with a real B210 over a cable.
-ASCII only.
+ASCII only. This goal has been achieved and the implementation can be improved from here.
+
+
+================================================================================
+VERIFIED BASELINE -- B210 cable loopback (known-good reference)
+================================================================================
+First full hardware pass. Keep these numbers; compare against them when something
+later misbehaves.
+
+Setup: MacBook Air (Apple Silicon), UHD 4.11.0.0 (conda env 'eve'), B210 serial
+309AF9C over USB 3. Wiring: TX/RX --> 50 dB fixed attenuator --> RX2. No SA (teed
+port available). Command:
+
+    python3 eve_b210.py loopback --nsym 11 --tsym 8 --rf 1296e6 --tx-gain 30 --rx-gain 50
+
+Result (GOOD):
+    captured 22075000 samples
+    peak |rx| = 0.005            (plenty of headroom; could raise gains toward ~0.1-0.3)
+    burst starts at sample 0     (cable latency negligible -- expected)
+    detected d_m == sent [1269,585,516,1366,1106,84,1333,1065,1789,3717,736]
+    confidence ~ 4.6 million, uniform across all 11 symbols
+    message 'ORI EVE TST'  CRC OK  PASS
+    spectrogram: 11 tones stepping cleanly in the 25-48 kHz comb (eve_b210_cap_spec.png)
+At tx-gain 30 / rx-gain 30 the same test also PASSED with peak |rx| = 0.001 and
+confidence ~235k -- lower level, still decoded (cable SNR to spare).
+
+Doppler check (correction path):
+    add  --f-dopp 3.1 --f-rate 0.02   -> should still PASS. eve_b210.py injects the
+    Doppler on the TX baseband and the decoder removes it (mirrors the sim).
+    KNOWN TRAP: an older eve_b210.py removed Doppler in the decoder but did NOT inject
+    it on hardware TX (the cable adds none), so it de-rotated a signal that was never
+    rotated -> every symbol came out exactly -1 (a ~half-tone-spacing offset), CRC FAIL,
+    with confidences climbing over the record (the rate term accumulating). If you ever
+    see a uniform -1 (or +1) across all symbols, suspect a frequency offset of one tone
+    spacing, not noise. Fixed in current eve_b210.py.
+
+What a healthy run shows vs a sick one:
+    healthy -> detected == sent, confidence high AND uniform, CRC OK.
+    level   -> peak |rx| well under 1.0 (raise/lower --rx-gain to place it).
+    freq    -> all symbols off by the same +/-N -> frequency offset (Doppler/ref), not noise.
+    noise   -> symbols scattered randomly, confidence low/uneven -> real SNR problem.
 
 ## 0. Restore + deps (if the box is fresh)
     pip install numpy galois sigmf matplotlib
