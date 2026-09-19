@@ -124,7 +124,9 @@ ability. At the CAMRAS-measured +0.65 dB-Hz it closes with margin; at 0 dB-Hz it
 0-to-1 dB band is the design edge; and Dwingeloo-alone October (-1.33 dB-Hz) is below
 the edge. Which is precisely the gap Effelsberg's +13 dB fills.
 
-## Monostatic operation for DSES (they hear their own echo) -- eve_tx_gated.py, eve_tx_rx_b210.py, eve_rx.py
+## Monostatic operation for DSES (they hear their own echo)
+
+eve_tx_gated.py, eve_tx_rx_b210.py, eve_rx.py
 
 DSES runs one dish and wants to receive its own signal. A dish cannot receive while its
 PA is keyed, so each symbol is a separate TX burst. Between bursts the PA is off, the
