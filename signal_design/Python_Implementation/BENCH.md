@@ -12,8 +12,10 @@ ASCII only. This goal has been achieved and the implementation can be improved f
 
 ## VERIFIED BASELINE -- B210 cable loopback (known-good reference)
 
-First full hardware pass. Keep these numbers; compare against them when something
+First full hardware pass. Keep these numbers and compare against them when something
 later misbehaves.
+
+This is the "it works on my computer" section. 
 
 Setup: MacBook Air (Apple Silicon), UHD 4.11.0.0 (conda env 'eve'), B210 serial
 309AF9C over USB 3. Wiring: TX/RX --> 50 dB fixed attenuator --> RX2. No SA (teed
@@ -98,7 +100,7 @@ directional coupler:
   gains, and (if you gate) the GPIO/PTT line on a scope at low level before trusting it.
   Start with lots of attenuation and low tx-gain.
 
-## 3. What "good" looks like
+## 3. What "good" looks like (alt text style)
   - Spectrogram: distinct horizontal tone segments, one per symbol, stepping in frequency
     (d * 5.74 Hz + offset). No smearing within a symbol.
   - Decode: detected d_m == sent d_m, confidence >> 2 (clean loopback gives thousands),
