@@ -1,7 +1,7 @@
 # EVE bench loopback -- test TX + RX + decode in the remote lab
 
-> ON A MAC (Apple Silicon)? See **MAC_STATION.md** first for UHD install, the B210
-> USB-morph quirk, and why we drive the radio via UHD's CLI binaries (no Python bindings).
+`ON A MAC (Apple Silicon)? See **MAC_STATION.md** first for UHD install, the B210
+USB-morph quirk, and why we drive the radio via UHD's CLI binaries (no Python bindings).`
 
 This is an attempt to write down bench test results. MAC_STATION.md has the steps that
 worked on that particular computer, for the Hello Giggy EME station build. 
@@ -10,10 +10,8 @@ One command exercises the whole chain and draws a spectrogram (a software spectr
 analyzer). Works with NO hardware (software channel) or with a real B210 over a cable.
 ASCII only. This goal has been achieved and the implementation can be improved from here.
 
+## VERIFIED BASELINE -- B210 cable loopback (known-good reference)
 
-================================================================================
-VERIFIED BASELINE -- B210 cable loopback (known-good reference)
-================================================================================
 First full hardware pass. Keep these numbers; compare against them when something
 later misbehaves.
 
