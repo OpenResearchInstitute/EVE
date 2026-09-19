@@ -73,6 +73,8 @@ memory-safe for full 165 s symbols:
     python3 eve_rx.py --selftest        # TX -> echo(Doppler+AWGN@0 dB-Hz) -> decode
     python3 eve_link_check.py           # the FER-vs-C/N0 table
 
+** Successfully run in Remote Labs 15 September 2026 **
+
 ## 2. Real B210 loopback (one radio, a cable, an attenuator)
 NEVER wire TX to RX bare. Use a fixed, power-rated attenuator, and tee to the SA with a
 directional coupler:
@@ -96,9 +98,7 @@ directional coupler:
     realistic, repeatable offset without moving an LO.
   - Output: eve_loop_hw.sigmf-* + eve_loop_hw_spec.png + a decode with CRC.
 
-  *** The --hardware path is a UHD TEMPLATE not yet run on a B210. *** Verify sample rate,
-  gains, and (if you gate) the GPIO/PTT line on a scope at low level before trusting it.
-  Start with lots of attenuation and low tx-gain.
+  ** Successfully run in Remote Labs 16 September 2026 **
 
 ## 3. What "good" looks like (alt text style)
   - Spectrogram: distinct horizontal tone segments, one per symbol, stepping in frequency
@@ -107,7 +107,8 @@ directional coupler:
     message correct, CRC OK, PASS.
   - With --twt: identical result (constant envelope; see TWT_GUIDE.md / fig_twt.png).
 
-## 4. Turning the bench test into an on-air test
-Same decoder, same SigMF. Replace the software/cable channel with the antenna + the
-monostatic gating (eve_tx_gated.py + eve_tx_rx_b210.py) for DSES, and feed eve_rx the
-astropy Doppler for the real path. The loopback is the honest dress rehearsal.
+## 4. Test with EME Stations
+  - Use the EVE signal with an EME capable station to test signal construction and performance.
+  - Use EVE symbol length for the test in order to control as many variables as possible.
+  - Doppler spread and therefore coherence time are worse for EME than EVE. Evaluate performance.
+
