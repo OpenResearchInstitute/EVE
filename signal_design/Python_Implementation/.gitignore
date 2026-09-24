@@ -1,0 +1,20 @@
+# EVE build artifacts -- regenerable, do not commit (see MANIFEST.md section 6)
+
+# SigMF recordings (big; regenerate from the scripts)
+*.sigmf-data
+*.sigmf-meta
+
+# capture spectrograms from a run (NOT the talk figures fig_*.png, which stay tracked)
+*_spec.png
+
+# monostatic schedules (regenerate with eve_tx_gated.py)
+*_schedule.json
+*_schedule.csv
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store

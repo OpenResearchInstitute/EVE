@@ -1,15 +1,15 @@
 # ORI EVE transmit waveform -- Pete Wyckoff's "Spiral" as a SigMF file
 
-Generates a SigMF recording of Pete Wyckoff (KA3WCA) "Venus Bounce Transmitter
+FILE INDEX: see MANIFEST.md for every file, what it does, and dependencies.
+
+Generates a SigMF recording of Pete Wyckoff KA3WCA "Venus Bounce Transmitter
 Spiral #2" and plays it through a USRP B210 (GNU Radio or uhd). For the EME station
 test and for sharing with Dwingeloo / Stockert / Effelsberg. ASCII only.
-
-Abraxas3d September 2026
 
 ## Files
 - eve_tx_sigmf.py            generator (numpy + galois + sigmf)
 - eve_spiral_smoke.sigmf-data/.sigmf-meta  ready-to-play SMOKE TEST (22 s, 44 MB,
-                            250 kSps, comb offset 25 kHz off DC). Validates the whole
+                            250 kSps, comb offset 25 kHz off DC). Validated the whole
                             B210 chain and shows the 11 tones. NOT the full frame.
 - fig_sigmf.png             spectrogram proof (11 M-ary tones stepping through the band)
 

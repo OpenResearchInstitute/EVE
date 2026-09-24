@@ -1,4 +1,15 @@
-.ipynb_checkpoints/
+# EVE repo -- universal build/OS cruft (applies to every subfolder)
+# signal_design/Python_Implementation/ has its OWN .gitignore for station artifacts
+# (*.sigmf-data, *_spec.png, *_schedule.*). This root file handles the cruft everywhere.
+
+# python
 __pycache__/
-de421.bsp
-commit.txt
+*.pyc
+*.pyo
+
+# node (if build_deck.js pulls pptxgenjs via npm)
+node_modules/
+
+# macOS + zip cruft
+.DS_Store
+__MACOSX/
