@@ -18,24 +18,22 @@ WHAT WE KNOW (these are measured values)
   value because the published CNR_1Hz result is built on it. Change ONE constant below
   to switch. This is the only measured number in the file.
 
-  Moon echo Doppler half-width: the lunar libration spread has been measured and
-  tabulated by the EME community. We use K1JT's "Frequency-Dependent
-  Characteristics of the EME Path" (Joe Taylor, 2010), specifically his w10 column, 
-  the full width at the 10% level. In other words the band containing 90% of the echo 
-  power. That is the same 90%-power convention as the Venus number above, so it maps 
-  straight in. Unlike Venus (one specular measurement we scale with frequency), the 
-  Moon's w10 does not appear to scale cleanly with frequency, from the tables, so it is 
-  stored as a per-band table and interpolated. K1JT's values assume stations at +/-40 deg 
-  latitude. The real spread varies through the month with the libration rate (it goes to 
-  zero at libration turning points), so the values are actually not fixed constants.
+  Moon echo Doppler half-width: NOT a table -- computed LIVE from lunar libration in
+  eve_moon_libration.py (Skyfield + JPL kernels), validated against K1JT 2010 to ~10%.
+  The Moon's spread varies ~50x over a libration cycle AND depends on the RECEIVER's
+  location (the observer's own ground velocity smears across the disk), so a fixed table
+  is wrong twice over. compute(freq, 'moon', epoch=, rx=) sizes it per session and per
+  receiver set: rx='all_earth' (broadcast worst case -- depends only on freq+epoch, and
+  bounds bistatic), rx='self'+station (monostatic, adaptive -- ride libration minima),
+  or a station list (coordinated). See eve_moon_libration for the method and kernels.
 
 WHAT WE ASSUME (documented, not measured)
-  The half-width scales linearly with carrier frequency for a fixed body and geometry
-  (Doppler = 2*v*f/c). So the value at any frequency is anchor * (f / f_anchor). This
-  reproduces Pete Wyckoff's Oct-2026 "~2.87 Hz at 2304 MHz" to within the measurement
-  spread, which is why 2.87 is no longer stored. We regenerate it every time.
-  (This linear-scaling assumption applies to the Venus anchor. The Moon uses the K1JT
-  table directly instead of scaling, because its w10 is not linear in frequency.)
+  Venus: the half-width scales linearly with carrier frequency for a fixed body and
+  geometry (Doppler = 2*v*f/c), so the value at any frequency is anchor * (f / f_anchor).
+  This reproduces Pete Wyckoff's Oct-2026 "~2.87 Hz at 2304 MHz" to within the measurement
+  spread, which is why 2.87 is no longer stored. (The Moon does NOT scale this way -- it is
+  computed live, not scaled.) The one Moon approximation is the limb-to-limb -> w10 shape
+  factor (0.27, K1JT L-band), documented in eve_moon_libration.
 
 CONVENTION (baked into the NAMES so we don't get confused)
   *_halfwidth_hz   one-sided (+/-) width
@@ -61,19 +59,29 @@ class Target:
     We are doing it this way because the Doppler Spread comes from the rotation
     of the target body.
 
-    Two ways to do this model, pick one per target:
+    Ways to carry the model, pick ONE per target:
       (a) anchor: one measured half-width at one frequency, scaled ANCHOR * f/f0
           (linear with frequency; a single specular measurement, e.g. Venus).
       (b) table_fullwidth_hz: {freq_hz: 90%-power FULL width}, linearly interpolated
-          (use when a body's width does NOT scale cleanly with f, e.g. the Moon).
-    halfwidth_hz(f) returns the one-sided (+/-) 90%-power half-width either way."""
+          (kept for reference bodies with a fixed table).
+      (c) libration=True: computed LIVE from lunar libration for a given epoch + receiver
+          set (the Moon). Needs compute(..., epoch=, rx=), which calls eve_moon_libration
+          -- NOT halfwidth_hz(f), because the spread depends on time and geometry, not f
+          alone. See MOON below.
+    halfwidth_hz(f) returns the one-sided (+/-) 90%-power half-width for (a)/(b)."""
     name: str
     provenance: str
     echo_halfwidth_hz_at_anchor: Optional[float] = None   # +/- Hz, 90%-power (anchor mode)
     anchor_freq_hz: Optional[float] = None
     table_fullwidth_hz: Optional[dict] = None             # {freq_hz: FULL width, 90% power}
+    libration: bool = False                               # compute live (Moon); needs epoch+rx
 
     def halfwidth_hz(self, freq_hz: float) -> float:
+        if self.libration:
+            raise ValueError(
+                "target '%s' is computed live from libration -- call compute(freq, '%s', "
+                "epoch=..., rx='all_earth'|'self', station=(lat,lon)), not halfwidth_hz()."
+                % (self.name, self.name))
         # (b) per-band table, linearly interpolated on the FULL-width values, then halved
         if self.table_fullwidth_hz:
             fs = sorted(self.table_fullwidth_hz)
@@ -106,15 +114,13 @@ VENUS = Target(
 )
 MOON = Target(
     name="moon",
-    # K1JT 2010, "Frequency-Dependent Characteristics of the EME Path", w10 column =
-    # full width at the 10% level (contains 90% of power) which is the same 90%-power convention
-    # as the Venus number. Stations at +/-40 deg latitude and representative libration state.
-    # w10 does not appear to scale cleanly with f, so this is a per-band interpolated table.
-    provenance="K1JT 2010 w10 (90%-power full width), +/-40 deg lat, libration-condition dependent",
-    table_fullwidth_hz={
-        144e6: 1.1, 432e6: 3.0, 1296e6: 10.0, 2304e6: 20.0,
-        3400e6: 31.0, 5760e6: 60.0, 10368e6: 128.0,
-    },
+    # Computed LIVE from lunar libration (eve_moon_libration.py), NOT a table: the Moon's
+    # spread varies ~50x over a libration cycle AND depends on the RECEIVER's location (the
+    # observer's own ground velocity smears across the disk). So we size per epoch + receiver
+    # set. Validated against the K1JT 2010 table to ~10%. See eve_moon_libration for the
+    # method, the receiver-set options (self / all_earth / [stations]), and the kernels.
+    provenance="Moon libration computed live (eve_moon_libration, Skyfield/JPL, K1JT-validated)",
+    libration=True,
 )
 TARGETS = {t.name: t for t in (VENUS, MOON)}
 
@@ -169,20 +175,40 @@ def compute(freq_hz: float,
             rbw_margin: float = 1.0,
             dc_guard_hz: float = 2000.0,
             fs: Optional[float] = None,
-            fs_headroom: float = 1.2) -> WaveformParams:
+            fs_headroom: float = 1.2,
+            epoch=None,
+            rx: str = "all_earth",
+            station=None) -> WaveformParams:
     """Derive the full waveform parameter set for a frequency + target.
 
-    spread_halfwidth_hz : override the measured/scaled half-width (e.g. for a body with
-                          no model, or to test a value). If None, use the target's model.
+    spread_halfwidth_hz : override the model's half-width (test/other bodies). If None,
+                          use the target's model.
     rbw_margin          : R_bw = full_width * rbw_margin (>=1.0 widens the bin for safety).
     dc_guard_hz         : how far to lift the comb off DC/LO leakage (hardware property).
     fs                  : force a sample rate; else report the floor the comb needs.
+    epoch, rx, station  : ONLY for a libration target (Moon). epoch = time (datetime/ISO);
+                          rx = 'all_earth' (broadcast; bounds bistatic), 'self'
+                          (station=(lat,lon), adaptive/monostatic), or [(lat,lon),...]
+                          (coordinated). Ignored for Venus. Both TX and RX must agree on
+                          (epoch, rx) so they compute the same R_bw -> causal.
     """
     tgt = TARGETS[target] if isinstance(target, str) else target
     if spread_halfwidth_hz is not None:
         halfwidth = float(spread_halfwidth_hz)
         scaled = False
         provenance = "user-supplied spread_halfwidth_hz=%.3f Hz" % halfwidth
+    elif getattr(tgt, "libration", False):
+        # Moon: compute live from lunar libration for this epoch + receiver set.
+        if epoch is None:
+            raise ValueError(
+                "target '%s' needs epoch=... (and rx='all_earth'|'self'+station). "
+                "The Moon's spread depends on time and receiver geometry, not frequency alone."
+                % tgt.name)
+        import eve_moon_libration as _lib          # lazy: skyfield only needed for the Moon
+        r = _lib.moon_spread(freq_hz, epoch, rx=rx, station=station)
+        halfwidth = r["w10_hz"] / 2.0              # w10 is the FULL 90%-power width = R_bw
+        scaled = True
+        provenance = r["provenance"]
     else:
         halfwidth = tgt.halfwidth_hz(freq_hz)
         scaled = (tgt.anchor_freq_hz != freq_hz)   # False only at an exact anchor freq
@@ -215,8 +241,15 @@ if __name__ == "__main__":
     ap.add_argument("--target", default="venus")
     ap.add_argument("--M", type=int, default=4096)
     ap.add_argument("--spread-halfwidth-hz", type=float, default=None)
+    ap.add_argument("--epoch", default=None, help="Moon only: time (ISO-8601, e.g. 2026-10-07T08:00:00Z)")
+    ap.add_argument("--rx", default="all_earth", help="Moon only: all_earth | self")
+    ap.add_argument("--lat", type=float, default=None); ap.add_argument("--lon", type=float, default=None)
     a = ap.parse_args()
-    print("EVE waveform parameters  (anchor: %s)\n" % TARGETS.get(a.target, VENUS).provenance)
+    station = (a.lat, a.lon) if (a.lat is not None and a.lon is not None) else None
+    print("EVE waveform parameters  (%s)\n" % TARGETS.get(a.target, VENUS).provenance)
     for f in a.rf:
-        print(compute(f, target=a.target, M=a.M,
-                      spread_halfwidth_hz=a.spread_halfwidth_hz).summary())
+        try:
+            print(compute(f, target=a.target, M=a.M, spread_halfwidth_hz=a.spread_halfwidth_hz,
+                          epoch=a.epoch, rx=a.rx, station=station).summary())
+        except ValueError as e:
+            import sys; sys.exit("error: %s" % e)
