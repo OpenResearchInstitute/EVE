@@ -33,14 +33,17 @@ to Pete's equation; a few kHz offset is recommended for real hardware.
 import argparse, json, struct, datetime, hashlib
 import numpy as np
 import galois
+import eve_params                # single source of truth for R_bw / tone spacing
 
-# ---- fixed design constants (Pete) ------------------------------------------
+# ---- fixed PROTOCOL-structure constants (Pete) ------------------------------
+# These are waveform STRUCTURE, not frequency-dependent: M, bits/symbol, and the
+# 11 symbols that carry one BCH(127,106) codeword (127 bits / 12 = 11). The
+# frequency/target-dependent numbers (R_bw, tone spacing) come from eve_params.
 M          = 4096
 BITS_SYM   = 12                 # log2(M)
 N_SYMBOLS  = 11
-R_BW       = 2.87               # Hz
-SPACING    = 2 * R_BW           # Hz, tone spacing
-T_SYM_FULL = 164.794            # s
+T_SYM_FULL = 164.794            # s -- Venus C/N0=0 Monte-Carlo REFERENCE only;
+                                #      resize via eve_link_check for other freq/target/CNR
 BCH_N, BCH_K = 127, 106
 PAYLOAD_BITS = BCH_K            # 106 = message + CRC
 CRC_BITS   = 16
@@ -62,6 +65,11 @@ def crc16_ccitt(bits):
 
 def text_to_msg_bits(text):
     raw = np.unpackbits(np.frombuffer(text.encode("ascii", "replace"), dtype=np.uint8))
+    if raw.size > MSG_BITS:                      # would silently truncate -> warn loudly
+        import sys
+        print("WARNING: message is %d bits (%d chars); the field is %d bits (max %d chars). "
+              "It will be TRUNCATED." % (raw.size, len(text), MSG_BITS, MSG_BITS // 8),
+              file=sys.stderr)
     bits = np.zeros(MSG_BITS, dtype=np.uint8)
     n = min(len(raw), MSG_BITS)
     bits[:n] = raw[:n]
@@ -87,18 +95,19 @@ def encode_symbols(payload106):
     return cw, syms
 
 # ---- NCO synthesis (Pete's equation) ----------------------------------------
-def synthesize(symbols, fs, t_sym, freq_offset=0.0, amplitude=0.8):
+def synthesize(symbols, fs, t_sym, spacing, freq_offset=0.0, amplitude=0.8):
+    """spacing = tone spacing in Hz (= 2*R_bw), from eve_params.compute()."""
     nsps = int(round(t_sym * fs))            # samples per symbol
     total = nsps * len(symbols)
     n = np.arange(total, dtype=np.float64)
     d = np.repeat(np.array(symbols, dtype=np.float64), nsps)[:total]
-    f = d * SPACING + freq_offset            # tone frequency per sample
+    f = d * spacing + freq_offset            # tone frequency per sample
     phase = 2.0 * np.pi * f * n / fs         # Pete: 2*pi*d*(2*R_bw)*n/Fs
     s = amplitude * np.exp(1j * phase)
     return s.astype(np.complex64), nsps
 
 # ---- SigMF output ------------------------------------------------------------
-def write_sigmf(iq, fs, base, symbols, nsps, t_sym, rf_freq, freq_offset, text):
+def write_sigmf(iq, fs, base, symbols, nsps, t_sym, rf_freq, freq_offset, text, params):
     data_path = base + ".sigmf-data"
     meta_path = base + ".sigmf-meta"
     inter = np.empty(iq.size * 2, dtype=np.float32)
@@ -106,14 +115,15 @@ def write_sigmf(iq, fs, base, symbols, nsps, t_sym, rf_freq, freq_offset, text):
     inter.tofile(data_path)
     sha = hashlib.sha512(open(data_path, "rb").read()).hexdigest()
 
+    spacing = params.tone_spacing_hz
     ann = []
     for m, d in enumerate(symbols):
-        f0 = d * SPACING + freq_offset
+        f0 = d * spacing + freq_offset
         ann.append({
             "core:sample_start": m * nsps,
             "core:sample_count": nsps,
-            "core:freq_lower_edge": rf_freq + f0 - R_BW,
-            "core:freq_upper_edge": rf_freq + f0 + R_BW,
+            "core:freq_lower_edge": rf_freq + f0 - params.R_bw_hz,
+            "core:freq_upper_edge": rf_freq + f0 + params.R_bw_hz,
             "core:label": "sym %d  d=%d  f=%.2f Hz" % (m, d, f0),
         })
     meta = {
@@ -128,7 +138,13 @@ def write_sigmf(iq, fs, base, symbols, nsps, t_sym, rf_freq, freq_offset, text):
             "core:recorder": "eve_tx_sigmf.py",
             "ori:design": {
                 "M": M, "bits_per_symbol": BITS_SYM, "n_symbols": N_SYMBOLS,
-                "R_bw_hz": R_BW, "tone_spacing_hz": SPACING,
+                "target": params.target,
+                "rf_hz": float(rf_freq),
+                "doppler_halfwidth_hz": params.halfwidth_hz,
+                "doppler_fullwidth_hz": params.fullwidth_hz,
+                "R_bw_hz": params.R_bw_hz, "tone_spacing_hz": params.tone_spacing_hz,
+                "coherence_time_s": params.coherence_time_s,
+                "params_provenance": params.provenance,
                 "t_sym_s": t_sym, "t_sym_design_s": T_SYM_FULL,
                 "bch": "BCH(127,106) t=3 narrow-sense systematic; genpoly "
                        "x^21+x^18+x^17+x^15+x^14+x^12+x^11+x^8+x^7+x^6+x^5+x+1",
@@ -157,13 +173,22 @@ def main():
                     help="symbol seconds (default: full design %.3f)" % T_SYM_FULL)
     ap.add_argument("--smoke", action="store_true",
                     help="short smoke-test file (tsym=2.0 s) to validate the chain")
-    ap.add_argument("--rf", type=float, default=1296e6, help="RF center freq for metadata (Hz)")
+    ap.add_argument("--rf", type=float, default=1296e6, help="RF center freq (Hz)")
+    ap.add_argument("--target", default="venus", help="radar target body for Doppler spread (venus|moon)")
     ap.add_argument("--freq-offset", type=float, default=0.0,
                     help="shift comb up off DC for real TX (Hz); RX subtracts it")
     ap.add_argument("--amplitude", type=float, default=0.8)
-    ap.add_argument("--message", default="ORI EVE DE PI9CAM",
-                    help="payload text (packed to 90 bits)")
+    ap.add_argument("--message", default="CQ DE W6ORI",
+                    help="payload text (max 11 chars / 90 bits; longer is truncated)")
     args = ap.parse_args()
+
+    # frequency/target -> R_bw, tone spacing (single source of truth)
+    params = eve_params.compute(args.rf, args.target, M)
+    spacing = params.tone_spacing_hz
+    if args.fs < params.fs_floor_hz:
+        print("WARNING: --fs %.0f Hz is below the fs floor %.0f Hz for %s @ %.4f MHz "
+              "(comb %.0f Hz). Raise --fs or the comb will alias."
+              % (args.fs, params.fs_floor_hz, args.target, args.rf/1e6, params.comb_bandwidth_hz))
 
     t_sym = 2.0 if args.smoke else (args.tsym if args.tsym else T_SYM_FULL)
 
@@ -173,20 +198,22 @@ def main():
     dec = np.array(_bch.decode(galois.GF2(cw)), dtype=np.uint8)
     assert np.array_equal(dec, payload), "BCH self-check failed"
 
-    iq, nsps = synthesize(symbols, args.fs, t_sym, args.freq_offset, args.amplitude)
+    iq, nsps = synthesize(symbols, args.fs, t_sym, spacing, args.freq_offset, args.amplitude)
     dpath, mpath, sha = write_sigmf(iq, args.fs, args.out, symbols, nsps, t_sym,
-                                    args.rf, args.freq_offset, args.message)
+                                    args.rf, args.freq_offset, args.message, params)
 
     dur = iq.size / args.fs
     mb = iq.size * 8 / 1e6
     print("message      :", args.message)
+    print("target/freq  : %s @ %.4f MHz  ->  R_bw %.3f Hz, spacing %.3f Hz, coh %.3f s"
+          % (args.target, args.rf/1e6, params.R_bw_hz, spacing, params.coherence_time_s))
     print("payload(106) :", "".join(map(str, payload)))
     print("symbols d_m  :", symbols)
-    print("tone freqs Hz:", [round(d*SPACING + args.freq_offset, 2) for d in symbols])
+    print("tone freqs Hz:", [round(d*spacing + args.freq_offset, 2) for d in symbols])
     print("t_sym        : %.3f s   samples/sym: %d" % (t_sym, nsps))
     print("duration     : %.2f s   samples: %d   size: %.1f MB" % (dur, iq.size, mb))
     print("sample_rate  : %.0f Hz   comb: %.0f..%.0f Hz (offset %.0f)"
-          % (args.fs, args.freq_offset, (M-1)*SPACING + args.freq_offset, args.freq_offset))
+          % (args.fs, args.freq_offset, (M-1)*spacing + args.freq_offset, args.freq_offset))
     print("wrote        :", dpath, mpath)
 
 if __name__ == "__main__":

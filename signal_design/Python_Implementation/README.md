@@ -10,26 +10,28 @@ test and for sharing with Dwingeloo / Stockert / Effelsberg. ASCII only, as usua
 (see MANIFEST.md for full list. This one will be removed soon.)
 - eve_tx_sigmf.py            generator (numpy + galois + sigmf) used for monolithic SigMF files.
 - eve_spiral_smoke.sigmf-data/.sigmf-meta  ready-to-play SMOKE TEST (22 s, 44 MB,
-<<<<<<< HEAD
-                            250 kSps, comb offset 25 kHz off DC). Validated the whole
-                            B210 chain and shows the 11 tones. NOT the full frame.
-=======
                             250 kSps, comb offset 25 kHz off DC). Validates the whole
-                            B210 chain and shows the 11 tones. NOT the full frame. 
->>>>>>> 61b2c3f75dbe78bea2d3b63f5828c04477155647
+                            B210 chain and shows the 11 tones. NOT the full frame.
 - fig_sigmf.png             spectrogram proof (11 M-ary tones stepping through the band)
 
 ## The design (verified from Pete's June 2026 block diagram)
     106 payload bits (message + CRC) -> BCH(127,106) -> 11 x M-ary(4096) symbols -> NCO
     NCO:  s_n = exp( i * 2*pi * d_{floor(n/Tsym)} * (2*R_bw) * n / Fs )
-    tone(d) = d * (2 * R_bw) = d * 5.74 Hz          d in [0, 4095]
-    R_bw    = 2.87 Hz        (FFT bin = Doppler-spread forecast, so 1 guard bin between tones)
-    M       = 4096 (12 bits/sym)   N_symbols = 11
-    T_sym   = 164.794 s     (RX Monte Carlo for C/N0 = 0 dB)
-    BW      = 4096 * 5.74   = 23.5 kHz  (Pete's "~22 kHz")
-    T_tx    = 11 * T_sym    = 1812.734 s  (~30 min 12.7 s)
-Verified in code: every symbol's synthesized tone lands on d*5.74 Hz; constant
-envelope; BCH encode/decode round-trips; SigMF validates. Whew!
+    tone(d) = d * (2 * R_bw)                        d in [0, 4095]
+    M       = 4096 (12 bits/sym)   N_symbols = 11   (fixed protocol structure)
+    T_sym   = 164.794 s     (Venus C/N0=0 Monte-Carlo REFERENCE; resize per link)
+    T_tx    = 11 * T_sym    = 1812.734 s  (~30 min 12.7 s at the reference T_sym)
+
+R_bw and tone spacing are NO LONGER fixed constants. They are computed per (frequency,
+target) in eve_params.py from the target's Doppler spread, so the same waveform works at
+1299.5 / 1296 / 2304 / 2330 MHz for Venus OR the Moon. The classic numbers are just one case:
+    Venus @ 1299.5 (measured, Estevez/CAMRAS):  R_bw 2.0 Hz,  spacing 4.0 Hz,  comb 16.4 kHz
+    Venus @ 2304   (scaled forecast ~ Pete's):  R_bw 3.5 Hz,  spacing 7.1 Hz,  comb 29 kHz
+    Moon  @ 2304   (K1JT libration w10):        R_bw 20  Hz,  spacing 40  Hz,  comb 164 kHz
+Pete's original "R_bw 2.87 Hz / 5.74 Hz / 23.5 kHz" was the 2304 Doppler-spread FORECAST;
+eve_params regenerates it from the measured anchor, so it is no longer stored separately.
+Run  `python3 eve_params.py --target venus`  (or moon) to print the set for any band.
+Verified in code: every symbol lands on d*spacing; constant envelope; BCH round-trips.
 
 ## Generate
     pip install numpy galois sigmf
@@ -40,10 +42,12 @@ envelope; BCH encode/decode round-trips; SigMF validates. Whew!
     python3 eve_tx_sigmf.py -o eve_spiral_full --freq-offset 25000 or more to get away from LO
     # EME test: the Moon link is ~223 dB stronger than Venus, so you do NOT need
     # 165 s symbols. A few seconds each is plenty and keeps the file small.
-    python3 eve_tx_sigmf.py --tsym 5 -o eve_spiral_eme --rf 1296e6 --freq-offset 25000
+    python3 eve_tx_sigmf.py --tsym 5 -o eve_spiral_eme --rf 1296e6 --target moon --freq-offset 25000
 
-Options: --fs (sample rate, default 250000), --tsym, --rf (metadata center freq),
---freq-offset (move comb off DC), --amplitude, --message (packed to 90 bits).
+Options: --fs (sample rate, default 250000), --tsym, --rf (center freq),
+--target (venus|moon -- sets R_bw/spacing), --freq-offset (move comb off DC), --amplitude,
+--message (max 11 chars / 90 bits; longer is truncated with a warning). Default message is
+CQ DE W6ORI, set once in eve_tx_sigmf.DEFAULT_MESSAGE.
 
 ## Play through a B210
 SigMF is complex float32, little-endian (cf32_le), interleaved I,Q.
@@ -73,31 +77,39 @@ Python TX script at the same samp_rate. Whatever works for you. Remote Labs uses
   For EME you can start with the B210's own reference. For the real Venus run use the
   disciplined reference. The Remote Labs B210 has a GPSDO. 
 
-## Receiver side (documented from Pete's slide, implemented next)
+## Receiver side (implemented in eve_rx.py; CAUSAL)
   - astropy removes bulk Doppler shift + Doppler rate of the path.
-  - FFT at R_bw (bin = 2.87 Hz, frame ~= 1/R_bw = 0.348 s). Every 0.348 chunk is
-    coherently integrated. Take advantage of the coherence time!
-  - Per symbol, combine ~440 frames NON-coherently (magnitude), pick the peak bin ->
-    d_m; the tone spacing 2*R_bw keeps one guard bin so spread <= R_bw does not leak.
+  - FFT at R_bw (frame = 1/R_bw = the coherence time). Every frame is coherently
+    integrated. Take advantage of the coherence time! (R_bw is per (freq,target): e.g.
+    Venus @ 1299.5 -> 2.0 Hz bin, 0.5 s frame; Moon @ 2304 -> 20 Hz bin, 0.05 s frame.)
+  - Per symbol, combine N = T_sym*R_bw frames NON-coherently (magnitude), pick the peak bin
+    -> d_m; the tone spacing 2*R_bw keeps one guard bin so spread <= R_bw does not leak.
   - De-map 11 symbols -> 132 bits -> take 127 -> BCH(127,106) decode -> check CRC-16.
+  - The RX computes R_bw/spacing ITSELF from the agreed --rf/--target (eve_params), so it
+    does NOT depend on the transmitter's file. It reads only fs from the recording.
 
 ## Matched RX has been built
-M=4096, R_bw=2.87, 2*R_bw spacing, 11 symbols, T_sym, BCH(127,106), the NCO equation. 
+M=4096, spacing = 2*R_bw (from eve_params), 11 symbols, T_sym, BCH(127,106), the NCO equation.
   - payload split: 90 message bits + CRC-16-CCITT (poly 0x1021, init 0xFFFF) = 106.
   - BCH: galois narrow-sense systematic, genpoly
     x^21+x^18+x^17+x^15+x^14+x^12+x^11+x^8+x^7+x^6+x^5+x+1.
   - bit->symbol: 127 coded bits zero-padded to 132, MSB-first groups of 12.
   - one guard offset (--freq-offset) for DC and baseband one-sided per his equation.
-All parameters and the exact symbol values are written into each .sigmf-meta.
+TX writes all parameters + the exact symbol values into each .sigmf-meta (archive/debug);
+the operational RX does not need them -- it regenerates the params from --rf/--target.
 
 ## Does it comply with our C/N0 = 0 to -1 dB-Hz channel?  (eve_link_check.py)
 
 Short answer: YES at 0 dB-Hz, knife-edge at -1, needs Effelsberg below that. This
 reproduces Pete's "RX Monte Carlo for C/N0 = 0 dB" that sized T_sym.
 
-Verified Monte-Carlo results (M=4096, 473 non-coherent frames/symbol, AWGN):
+Monte-Carlo results below are the R_bw = 2.87 Hz FORECAST case (473 frames/symbol, AWGN) --
+the historical reference that sized T_sym. eve_link_check.py now takes --rf/--target and
+recomputes R_bw and the frame count for whatever band/target you pass (e.g. the measured
+Venus @ 1299.5 R_bw = 2.0 Hz gives 330 frames/symbol and slightly different SER), so re-run
+it for your case rather than trusting these exact numbers:
 
-  C/N0 (dB-Hz)   symbol err   frame err (11 sym)   verdict
+  C/N0 (dB-Hz)   symbol err   frame err (11 sym)   verdict     [R_bw = 2.87 Hz forecast]
   +0.65 (CAMRAS)   0.0007        0.007              closes
    0.00            0.0020        0.022              closes   <- Pete's design point
   -1.00            0.042         0.38               marginal
@@ -105,8 +117,8 @@ Verified Monte-Carlo results (M=4096, 473 non-coherent frames/symbol, AWGN):
   +11.94 (+Effel)  0.0000        0.000              closes
 
 How it is computed: the link budget gives C/N0. Per-frame FFT-bin SNR is
-gamma_f = (C/N0 linear)/R_bw (coherent within one 0.348 s frame = the coherence time).
-Combining N=473 frames non-coherently, the true tone bin is 0.5*noncentral_chi2(2N,
+gamma_f = (C/N0 linear)/R_bw (coherent within one 1/R_bw frame = the coherence time).
+Combining N = T_sym*R_bw frames non-coherently, the true tone bin is 0.5*noncentral_chi2(2N,
 2N*gamma_f), the other M-1 bins are 0.5*central_chi2(2N). 
 FER = 1-(1-SER)^11 because a wrong M-ary symbol flips ~6 of its 12 bits, which
 BCH(127,106) t=3 cannot fix. So the frame needs all 11 symbols right.
@@ -118,10 +130,11 @@ end_to_end_check(). This is based off of Pete's MATLAB work and digital comm the
 - Real Doppler spread adds a few dB of intra-frame loss. 
   Pete set the frame length = coherence time to keep this small, but test it.
 - FER assumes hard M-ary decisions and no BCH rescue of symbol errors.
-- Frame count: 473 = T_sym*R_bw; Pete's slide says 440 (guard/overlap). 
+- Frame count = T_sym*R_bw (473 at the 2.87 Hz forecast; Pete's slide says 440 w/ overlap).
 
 Run it:
-      python3 eve_link_check.py          # cross-check + the table above
+      python3 eve_link_check.py --rf 1299.5e6 --target venus   # recompute for your case
+      python3 eve_link_check.py                                # defaults: Venus @ 1299.5
       python3 -c "import eve_link_check as L; print(L.ser_fast(-1.0, coh_loss=0.7))"
 
 The waveform is matched to the exact channel the link budget predicts, to the best of our
@@ -131,7 +144,8 @@ the edge. Which is precisely the gap Effelsberg's +13 dB fills.
 
 ## Monostatic operation for DSES (they hear their own echo)
 
-eve_tx_gated.py, eve_tx_rx_b210.py, eve_rx.py
+eve_tx_gated.py (schedule), eve_b210.py run (drives the B210 + PTT), eve_rx.py (decode).
+(eve_tx_rx_b210.py is SUPERSEDED -- do not use it; see MANIFEST / MAC_STATION.)
 
 DSES runs one dish and wants to receive its own signal. A dish cannot receive while its
 PA is keyed, so each symbol is a separate TX burst. Between bursts the PA is off, the
@@ -146,18 +160,19 @@ LNA SAFETY (non-negotiable ordering; a hardware sequencer like the Kuhne SEQ 4 e
   RX: RF off -> PA unkeys (guard) -> PTT off -> relay DISH->LNA -> settle -> RX on.
   RF power is ZERO whenever the relay is in or moving to RX. Never reorder this.
 
-Planned Workflow (needs to be updated):
+Workflow:
   1. Build the schedule (prints TX/RX/PTT times, checks W<RTT and LNA safety):
-        python3 eve_tx_gated.py --distance-mkm 40.82 --tsym 164.794 -o eve_gated_venus
+        python3 eve_tx_gated.py --distance-mkm 40.82 --tsym 164.794 --rf 2304e6 --target venus -o eve_gated_venus
      For the EME bench (shorter round trip), use short symbols and get a playable file:
-        python3 eve_tx_gated.py --eme --tsym 1.0 -o eve_gated_eme --write-iq
-  2. Run the station (HARDWARE BRING-UP REQUIRED; --dry-run prints the sequence first):
-        python3 eve_tx_rx_b210.py eve_gated_venus_schedule.json --rf 2304e6 --dry-run
-     It keys the sequencer via B210 GPIO, JIT-synthesizes each burst, then records the
-     echo to eve_rx_capture.sigmf-* . Verify GPIO pin / sequencer wiring / timing on the
-     bench at low power with a scope BEFORE going on the air.
-  3. Decode the capture:
-        python3 eve_rx.py eve_rx_capture.sigmf-meta --f-dopp <Hz> --f-rate <Hz/s>
+        python3 eve_tx_gated.py --eme --tsym 1.0 --rf 144e6 --target moon -o eve_gated_eme --write-iq
+  2. Run the station with eve_b210.py (validate PTT with 'ptt-test' + a scope FIRST):
+        python3 eve_b210.py run --schedule eve_gated_venus_schedule.json --rf 144e6 --target venus --ptt
+     It keys the SEQ 4 via B210 FP0 GPIO_0, JIT-synthesizes each burst, waits the round trip,
+     and captures the echo. (--rf is the transverter IF, 144e6, not 2304e6.) Verify GPIO /
+     sequencer wiring / timing on the bench at low power with a scope BEFORE going on the air.
+  3. Decode the capture (the RX is causal -- it needs the agreed band, not the TX file):
+        python3 eve_rx.py capture.sigmf-meta --rf 144e6 --target venus --tsym 164.794 \
+            --f-dopp <Hz> --f-rate <Hz/s>
      Doppler shift + rate come from astropy/helper script for the path/time.
      Output: the 11 d_m, the recovered message, and CRC OK/FAIL.
 

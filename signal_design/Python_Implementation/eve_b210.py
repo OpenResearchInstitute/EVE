@@ -23,6 +23,7 @@ import argparse, json, sys, time, threading
 import numpy as np
 import eve_tx_sigmf as tx
 import eve_rx as rx
+import eve_params            # R_bw / tone spacing from (freq, target)
 
 def find_burst_start(iq, rate, guard_ms=20.0):
     """Coarse sync: return the sample index where the burst begins, by energy.
@@ -81,11 +82,11 @@ def apply_doppler(iq, rate, f_dopp, f_rate):
     t = np.arange(iq.size) / rate
     return (iq * np.exp(1j * 2 * np.pi * (f_dopp * t + 0.5 * f_rate * t * t))).astype(np.complex64)
 
-def synth(message, rate, tsym, nsym, freq_offset, amp=0.7):
+def synth(message, rate, tsym, nsym, freq_offset, spacing, amp=0.7):
     payload = tx.build_payload(message)
     _, symbols = tx.encode_symbols(payload)
     symbols = symbols[:nsym]
-    iq, nsps = tx.synthesize(symbols, rate, tsym, freq_offset, amplitude=amp)
+    iq, nsps = tx.synthesize(symbols, rate, tsym, spacing, freq_offset, amplitude=amp)
     return symbols, iq.astype(np.complex64), nsps
 
 def stream_tx(uhd, u, samples, start_time=None):
@@ -123,12 +124,15 @@ def capture_rx(uhd, u, n, start_time=None):
         m = min(k, n - got); buf[got:got+m] = recv[:m]; got += m
     return buf[:got]
 
-def write_sigmf(iq, rate, rf, freq_offset, tsym, out):
+def write_sigmf(iq, rate, rf, freq_offset, tsym, out, params):
     inter = np.empty(iq.size*2, dtype=np.float32); inter[0::2]=iq.real; inter[1::2]=iq.imag
     inter.tofile(out + ".sigmf-data")
     meta = {"global": {"core:datatype":"cf32_le","core:sample_rate":float(rate),
                        "core:version":"1.0.0","core:description":"EVE B210 capture",
-                       "ori:design":{"t_sym_s":tsym,"freq_offset_hz":freq_offset}},
+                       "ori:design":{"t_sym_s":tsym,"freq_offset_hz":freq_offset,
+                                      "target":params.target,"rf_hz":float(rf),
+                                      "R_bw_hz":params.R_bw_hz,
+                                      "tone_spacing_hz":params.tone_spacing_hz}},
             "captures":[{"core:sample_start":0,"core:frequency":float(rf)}],"annotations":[]}
     json.dump(meta, open(out + ".sigmf-meta","w"), indent=2)
 
@@ -141,10 +145,11 @@ def cmd_probe(a):
 
 def cmd_txonly(a):
     uhd = _uhd()
-    syms, iq, _ = synth(a.message, a.rate, a.tsym, a.nsym, a.freq_offset)
+    P = eve_params.compute(a.rf, a.target, tx.M)
+    syms, iq, _ = synth(a.message, a.rate, a.tsym, a.nsym, a.freq_offset, P.tone_spacing_hz)
     print("TX-ONLY (RX untouched). symbols:", syms)
     print("watch the SA at %.6f MHz; comb spans +%.0f..%.0f Hz above tune"
-          % (a.rf/1e6, a.freq_offset, a.freq_offset + (tx.M-1)*tx.SPACING))
+          % (a.rf/1e6, a.freq_offset, a.freq_offset + (tx.M-1)*P.tone_spacing_hz))
     #u = make_usrp(uhd, a.rate, a.rf, tx_gain=a.tx_gain, tx_ant=a.tx_ant, freq_offset=a.freq_offset)
     u = make_usrp(uhd, a.rate, a.rf, tx_gain=a.tx_gain, tx_ant=a.tx_ant)
     reps = max(1, a.repeat)
@@ -155,7 +160,8 @@ def cmd_txonly(a):
 
 def cmd_loopback(a):
     uhd = _uhd()
-    syms, iq, nsps = synth(a.message, a.rate, a.tsym, a.nsym, a.freq_offset)
+    P = eve_params.compute(a.rf, a.target, tx.M)
+    syms, iq, nsps = synth(a.message, a.rate, a.tsym, a.nsym, a.freq_offset, P.tone_spacing_hz)
     print("LOOPBACK (TX->attenuator->RX). symbols:", syms)
     iq = apply_doppler(iq, a.rate, a.f_dopp, a.f_rate)   # inject on TX; decoder removes it
     u = make_usrp(uhd, a.rate, a.rf, tx_gain=a.tx_gain, rx_gain=a.rx_gain,
@@ -171,25 +177,26 @@ def cmd_loopback(a):
           % (rxiq.size, pk, "  CLIPPING -- lower --rx-gain!" if pk > 0.98 else ""))
     start = find_burst_start(rxiq, a.rate)
     print("burst starts at sample %d (%.3f s into capture)" % (start, start/a.rate))
-    _finish(rxiq[start:], a, syms)
+    _finish(rxiq[start:], a, syms, P)
 
 def cmd_run(a):
     uhd = _uhd()
+    P = eve_params.compute(a.rf, a.target, tx.M)
     sch = json.load(open(a.schedule))
     rate = a.rate; foff = sch.get("freq_offset_hz", a.freq_offset); W = sch["symbol_s"]
     rtt = sch["rtt_s"]; syms = sch["symbols_d"]
-    print("SCHEDULE run: RTT %.3f s, %d symbols of %.3f s (%s)"
-          % (rtt, len(syms), W, a.schedule))
+    print("SCHEDULE run: RTT %.3f s, %d symbols of %.3f s (%s)  [%s: R_bw %.3f Hz, spacing %.3f Hz]"
+          % (rtt, len(syms), W, a.schedule, a.target, P.R_bw_hz, P.tone_spacing_hz))
     u = make_usrp(uhd, rate, a.rf, tx_gain=a.tx_gain, rx_gain=a.rx_gain,
                   tx_ant=a.tx_ant, rx_ant=a.rx_ant, freq_offset=foff)
-    GUARD = 0.25            # >= SEQ 4 delay (100..150 ms) + relay travel + margin
+    GUARD = 0.30            # >= SEQ 4 delay (100..150 ms) + relay travel + margin
     if a.ptt:
         ptt_setup(u)
         print("PTT ENABLED (FP0 GPIO_0). *** Verify with 'ptt-test' + scope FIRST. ***")
     caps = []
     try:
         for k, d in enumerate(syms):
-            burst, _ = tx.synthesize([d], rate, W, foff, amplitude=0.7)
+            burst, _ = tx.synthesize([d], rate, W, P.tone_spacing_hz, foff, amplitude=0.7)
             t0 = u.get_time_now().get_real_secs() + 1.0
             if a.ptt:                                   # key TX; SEQ 4: relay->TX, then PA
                 ptt_set(u, True); time.sleep(GUARD)     # let relay settle + PA come up
@@ -210,7 +217,7 @@ def cmd_run(a):
     dhat = []
     for seg in caps:
         st = find_burst_start(seg, rate)
-        d, _ = rx.detect_symbol(seg[st:st+int(W*rate)], rate, foff)
+        d, _ = rx.detect_symbol(seg[st:st+int(W*rate)], rate, P.tone_spacing_hz, P.R_bw_hz, foff)
         dhat.append(d)
     print("detected d_m:", dhat)
     text, crc, _ = rx.symbols_to_message(dhat)
@@ -223,10 +230,10 @@ def cmd_run(a):
             spectrogram(np.concatenate(caps), rate, a.out+"_spec.png", "EVE B210 schedule capture", cmap="magma")
         except Exception as e: print("  (spectrogram skipped: %s)"%e)
 
-def _finish(rxiq, a, syms):
+def _finish(rxiq, a, syms, params):
     if rxiq.size == 0:
         print("no samples captured -- check attenuation/wiring; try the SA path."); return
-    write_sigmf(rxiq, a.rate, a.rf, a.freq_offset, a.tsym, a.out)
+    write_sigmf(rxiq, a.rate, a.rf, a.freq_offset, a.tsym, a.out, params)
     try:
         from eve_loopback import spectrogram
         spectrogram(rxiq, a.rate, a.out + "_spec.png",
@@ -234,7 +241,8 @@ def _finish(rxiq, a, syms):
     except Exception as e:
         print("  (spectrogram skipped: %s)" % e)
     print("--- decode ---")
-    r = rx.decode(rxiq, a.rate, a.tsym, a.freq_offset, a.f_dopp, a.f_rate)
+    r = rx.decode(rxiq, a.rate, a.tsym, params.tone_spacing_hz, params.R_bw_hz,
+                  a.freq_offset, a.f_dopp, a.f_rate)
     nerr = sum(x != y for x, y in zip(r["symbols"][:len(syms)], syms))
     print("PASS" if (nerr == 0 and r["crc_ok"]) else "symbols wrong: %d (see spectrogram)" % nerr)
 
@@ -261,12 +269,16 @@ def main():
     p = argparse.ArgumentParser(description="EVE B210 station (UHD 4.11 Python API).")
     p.add_argument("--rate", type=float, default=250000.0)
     p.add_argument("--rf", type=float, default=1296e6)
+    p.add_argument("--target", default="venus", help="target body (venus|moon) -> R_bw/spacing")
     p.add_argument("--freq-offset", type=float, default=25000.0, help="comb offset off DC")
     p.add_argument("--tx-gain", type=float, default=30.0)
     p.add_argument("--rx-gain", type=float, default=30.0)
     p.add_argument("--tx-ant", default="TX/RX")
-    p.add_argument("--rx-ant", default="RX2")
-    p.add_argument("--message", default="ORI EVE TST")
+    # SINGLE IF PORT: the 23 G4 has one IF connector, so the B210 uses its bidirectional
+    # TX/RX port for BOTH transmit and receive (its internal T/R switch duplexes). RX2 is
+    # unused in the on-air chain. Override with --rx-ant RX2 only for a two-port bench setup.
+    p.add_argument("--rx-ant", default="TX/RX")
+    p.add_argument("--message", default="CQ DE W6ORI")
     p.add_argument("--nsym", type=int, default=11)
     p.add_argument("--tsym", type=float, default=8.0)
     p.add_argument("--repeat", type=int, default=1, help="txonly: repeat passes")

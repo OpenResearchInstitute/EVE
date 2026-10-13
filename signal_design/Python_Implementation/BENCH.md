@@ -1,6 +1,6 @@
 # EVE bench loopback -- test TX + RX + decode in the remote lab
 
-`ON A MAC (Apple Silicon)? See **MAC_STATION.md** first for UHD install, the B210
+`ON A MAC with Apple Silicon? See **MAC_STATION.md** first for UHD install, the B210
 USB-morph quirk, and why we drive the radio via UHD's CLI binaries (no Python bindings).`
 
 This is an attempt to write down bench test results. MAC_STATION.md has the steps that
@@ -17,13 +17,19 @@ later misbehaves.
 
 This is the "it works on my computer" section. 
 
+NOTE: this baseline predates eve_params. It ran at the fixed R_bw = 2.87 Hz / spacing 5.74 Hz
+and the old default message 'ORI EVE TST'. The current code computes R_bw from --target, so at
+1296 venus it uses R_bw ~2.0 / spacing ~4.0 and the default message is CQ DE W6ORI -- the exact
+d_m list, comb width, and message below WILL DIFFER on a re-run. Expected, not a regression;
+compare the health SIGNATURE (detected == sent, high uniform confidence, CRC OK), not the values.
+
 Setup: MacBook Air (Apple Silicon), UHD 4.11.0.0 (conda env 'eve'), B210 serial
 309AF9C over USB 3. Wiring: TX/RX --> 50 dB fixed attenuator --> RX2. No SA (teed
 port available). Command:
 
     python3 eve_b210.py loopback --nsym 11 --tsym 8 --rf 1296e6 --tx-gain 30 --rx-gain 50
 
-Result (GOOD):
+Result (GOOD) [pre-eve_params: R_bw 2.87 Hz, spacing 5.74 Hz, message 'ORI EVE TST']:
     captured 22075000 samples
     peak |rx| = 0.005            (plenty of headroom; could raise gains toward ~0.1-0.3)
     burst starts at sample 0     (cable latency negligible -- expected)
@@ -52,7 +58,7 @@ What a healthy run shows vs a sick one:
 
 ## 0. Restore + deps (if the box is fresh)
     pip install numpy galois sigmf matplotlib
-    # needs eve_tx_sigmf.py, eve_rx.py, eve_twt.py in the same folder.
+    # needs eve_params.py, eve_tx_sigmf.py, eve_rx.py, eve_twt.py in the same folder.
 
 ## 1. Software loopback (no radio) -- run this first
 Validates waveform + decoder + Doppler removal + (optionally) the TWT, right here.
@@ -102,7 +108,8 @@ directional coupler:
 
 ## 3. What "good" looks like (alt text style)
   - Spectrogram: distinct horizontal tone segments, one per symbol, stepping in frequency
-    (d * 5.74 Hz + offset). No smearing within a symbol.
+    (d * spacing + offset, where spacing = 2*R_bw from eve_params: 4.0 Hz at venus/1299.5,
+    5.74 Hz at the old 2.87 forecast). No smearing within a symbol.
   - Decode: detected d_m == sent d_m, confidence >> 2 (clean loopback gives thousands),
     message correct, CRC OK, PASS.
   - With --twt: identical result (constant envelope; see TWT_GUIDE.md / fig_twt.png).

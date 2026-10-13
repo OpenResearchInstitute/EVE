@@ -85,8 +85,9 @@ Notes:
   - Do NOT 'conda activate eve' while an orbital venv is active. If you see
     "(eve) (orbital)" in the prompt, open a fresh terminal and just activate eve.
     But, it worked for me when I did accidentally stack them. Just be cautions. 
-  - Keep the .py files (eve_b210.py, eve_tx_sigmf.py, eve_rx.py, eve_loopback.py,
-    eve_twt.py, eve_link_check.py) together in Python_Implementation and run from there.
+  - Keep the .py files (eve_params.py, eve_b210.py, eve_tx_sigmf.py, eve_rx.py,
+    eve_loopback.py, eve_twt.py, eve_link_check.py, eve_tx_gated.py) together in
+    Python_Implementation and run from there. eve_params.py is imported by all of them.
 
 ================================================================================
 3. THE B210 USB "MORPH" QUIRK -- read this before you panic (I panicked)
@@ -119,15 +120,20 @@ command your B210 in a way that lets you transmit and receive.
 ================================================================================
 General shape:   python3 eve_b210.py <command> [options]
 Common options (all have safe defaults):
-    --rf 1296e6         RF center (Hz). Use your bench / SA-friendly band.
-    --rate 250000       sample rate (Hz). Leave at 250k.
+    --rf 1296e6         RF center (Hz). Use your bench / SA-friendly band. NOTE: with the
+                        23 G4 transverter, --rf is the 144 MHz IF, not 2304 (see EME_BRINGUP).
+    --target venus      venus|moon. Sets R_bw / tone spacing from the target's Doppler spread
+                        (eve_params). Use moon for EME. Default venus.
+    --rate 250000       sample rate (Hz). Leave at 250k for Venus; a 2304 Moon comb needs more.
     --freq-offset 25000 comb sits this far above the tune freq, off DC. Leave at 25k.
     --tx-gain 30        TX gain dB (0..89.75). START LOW.
     --rx-gain 30        RX gain dB (0..76).
     --tx-ant TX/RX      TX port (only choice on B210).
-    --rx-ant RX2        RX port for loopback (RX2 recommended; TX/RX also valid).
+    --rx-ant TX/RX      RX port. DEFAULT is now TX/RX -- the single-IF-port on-air chain uses
+                        the B210's bidirectional TX/RX for both directions. Use RX2 only for a
+                        two-port bench loopback (TX/RX --pad--> RX2).
     --nsym 11 --tsym 8  number of symbols and seconds/symbol (bench: 11 x 8 s).
-    --message "ORI EVE TST"   up to ~11 characters.
+    --message "CQ DE W6ORI"   up to 11 characters (default from eve_tx_sigmf.DEFAULT_MESSAGE).
     -o eve_b210_cap     output basename for captures.
 
 --- 5a. TX ONLY into the spectrum analyzer (START HERE; RX never touched) ------
@@ -149,9 +155,11 @@ showing the theory of what is going on here.
 Wiring:  B210 TX/RX --> [40-60 dB attenuator] --> B210 RX2.  NEVER bare.
 If you are doing this in ORI Remote Lab, you have 50 dB attentuation for loopback. 
 The attenuation is chosen for you in order to not hurt the B210. 
+IMPORTANT: loopback is a TWO-PORT bench setup, so pass --rx-ant RX2 -- the on-air default is
+now TX/RX (single IF port), which cannot loop back to itself over a cable.
 
 Optional SA tee off TX via a directional coupler. Upon request, in Remote Labs. 
-    python3 eve_b210.py loopback --nsym 11 --tsym 8 --rf 1296e6 --tx-gain 30 --rx-gain 30
+    python3 eve_b210.py loopback --nsym 11 --tsym 8 --rf 1296e6 --rx-ant RX2 --tx-gain 30 --rx-gain 30
 It prints: captured N samples (peak |rx| = ...), the burst start, then the decode.
 What good looks like:
     peak |rx| = 0.1 to 0.6      (well under 1.0; if > 0.98 it says CLIPPING then lower --rx-gain)
@@ -165,13 +173,15 @@ We don't want to start out with a crappy signal.
 
 --- 5c. EME / EVE scheduled run (burst -> wait RTT -> capture) ---------------
 Uses a schedule from eve_tx_gated.py. TX a symbol, wait the round-trip, capture the echo.
-    # EME (short symbols, ~2.56 s round trip):
-    python3 eve_tx_gated.py --eme --tsym 1.0 -o eve_gated_eme
-    python3 eve_b210.py run --schedule eve_gated_eme_schedule.json --rf 1296e6 \
+Pass --target and matching --rf on BOTH the gated and the run step. With the 23 G4, --rf is
+the 144 MHz IF (direct B210 with no transverter: use the actual band).
+    # EME (short symbols, ~2.56 s round trip). Moon, via the transverter IF:
+    python3 eve_tx_gated.py --eme --tsym 1.0 --rf 144e6 --target moon -o eve_gated_eme
+    python3 eve_b210.py run --schedule eve_gated_eme_schedule.json --rf 144e6 --target moon \
         --tx-gain 40 --rx-gain 40
-    # EVE (164.794 s symbols, ~4.5 min round trip):
-    python3 eve_tx_gated.py --distance-mkm 40.82 --tsym 164.794 -o eve_gated_venus
-    python3 eve_b210.py run --schedule eve_gated_venus_schedule.json --rf 2304e6 ...
+    # EVE (164.794 s symbols, ~4.5 min round trip). Venus, via the transverter IF:
+    python3 eve_tx_gated.py --distance-mkm 40.82 --tsym 164.794 --rf 144e6 --target venus -o eve_gated_venus
+    python3 eve_b210.py run --schedule eve_gated_venus_schedule.json --rf 144e6 --target venus ...
 Each symbol: it transmits, waits the round trip, captures a generous window, and syncs
 onto the echo by energy. Prints detected d_m, message, CRC. NOTE: on-air monostatic
 (one dish TX and RX) still needs the T/R sequencer for LNA safety -- see TWT_GUIDE.md /

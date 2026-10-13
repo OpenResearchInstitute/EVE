@@ -28,12 +28,13 @@ BENCH WIRING for --hardware (never wire TX to RX bare):
 import argparse, json, numpy as np
 import eve_tx_sigmf as tx
 import eve_rx as rx
+import eve_params
 try:
     import eve_twt as twt
 except Exception:
     twt = None
 
-def build_tx(message, fs, t_sym, freq_offset, n_sym=None):
+def build_tx(message, fs, t_sym, spacing, freq_offset, n_sym=None):
     payload = tx.build_payload(message)
     cw, symbols = tx.encode_symbols(payload)
     if n_sym:
@@ -42,7 +43,7 @@ def build_tx(message, fs, t_sym, freq_offset, n_sym=None):
         raise SystemExit("Too many samples for the bench harness (%.0fM). Use short --tsym "
                          "for loopback; test sensitivity with: python3 eve_rx.py --selftest"
                          % (len(symbols)*t_sym*fs/1e6))
-    iq, nsps = tx.synthesize(symbols, fs, t_sym, freq_offset, amplitude=0.8)
+    iq, nsps = tx.synthesize(symbols, fs, t_sym, spacing, freq_offset, amplitude=0.8)
     return symbols, iq.astype(np.complex64), nsps
 
 def sim_channel(iq, fs, cn0_db, f_dopp, f_rate, use_twt=False, rng=None):
@@ -144,7 +145,7 @@ def main():
     ap.add_argument("--hardware", action="store_true", help="use a real B210 (else --sim)")
     ap.add_argument("--sim", action="store_true", help="explicit software mode (default)")
     ap.add_argument("-o", "--out", default="eve_loop")
-    ap.add_argument("--message", default="ORI EVE TST")
+    ap.add_argument("--message", default="CQ DE W6ORI")
     ap.add_argument("--nsym", type=int, default=4, help="symbols to send (bench: a few)")
     ap.add_argument("--tsym", type=float, default=8.0, help="symbol seconds (bench: short)")
     ap.add_argument("--cn0", type=float, default=20.0, help="sim C/N0 dB-Hz (cable is strong)")
@@ -154,16 +155,22 @@ def main():
     ap.add_argument("--fs", type=float, default=None)
     ap.add_argument("--freq-offset", type=float, default=None)
     ap.add_argument("--rf", type=float, default=1296e6)
+    ap.add_argument("--target", default="venus", help="target body (venus|moon) for R_bw/spacing")
     ap.add_argument("--tx-gain", type=float, default=50); ap.add_argument("--rx-gain", type=float, default=30)
     ap.add_argument("--colormap", default="magma", help="spectrogram colormap (magma/inferno/viridis/turbo)")
     ap.add_argument("--dyn-range", type=float, default=None, help="dB below peak to display (default: auto from noise floor)")
     a = ap.parse_args()
 
-    # sim wants offset=0 and fs that fits the comb; hardware wants 250k + 25k off DC
-    fs = a.fs or (250000.0 if a.hardware else 48000.0)
-    foff = a.freq_offset if a.freq_offset is not None else (25000.0 if a.hardware else 0.0)
+    # R_bw / tone spacing / sensible fs + offset all come from (freq, target)
+    P = eve_params.compute(a.rf, a.target, tx.M)
+    spacing = P.tone_spacing_hz
+    # sim can use a modest fs that just fits the comb; hardware wants the B210 rate
+    fs = a.fs or (250000.0 if a.hardware else max(48000.0, P.fs_floor_hz))
+    foff = a.freq_offset if a.freq_offset is not None else (P.freq_offset_hz if a.hardware else 0.0)
+    print("params: %s @ %.4f MHz -> R_bw %.3f Hz, spacing %.3f Hz, fs %.0f Hz"
+          % (a.target, a.rf/1e6, P.R_bw_hz, spacing, fs))
 
-    symbols, iq, nsps = build_tx(a.message, fs, a.tsym, foff, a.nsym)
+    symbols, iq, nsps = build_tx(a.message, fs, a.tsym, spacing, foff, a.nsym)
     print("sent d_m     :", symbols)
 
     if a.hardware:
@@ -179,7 +186,7 @@ def main():
                 "EVE loopback capture (%s)" % ("hardware" if a.hardware else "sim"),
                 cmap=a.colormap, dyn_range=a.dyn_range)
     print("\n--- decode ---")
-    r = rx.decode(rxiq, fs, a.tsym, foff, a.f_dopp, a.f_rate)
+    r = rx.decode(rxiq, fs, a.tsym, spacing, P.R_bw_hz, foff, a.f_dopp, a.f_rate)
     nerr = sum(x != y for x, y in zip(r["symbols"][:len(symbols)], symbols))
     print("PASS" if (nerr == 0 and r["crc_ok"]) else "symbols wrong: %d" % nerr)
 
